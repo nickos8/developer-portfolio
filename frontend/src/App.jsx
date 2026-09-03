@@ -161,6 +161,30 @@ function handleProjectChange(event) {
   />
 </div>
 
+<div>
+  <label htmlFor="github-url">GitHub URL</label>
+  <input
+    id="github_url"
+    name="github_url"
+    type="text"
+    value={projectForm.github_url}
+    onChange={handleProjectChange}
+  />
+</div>
+
+<div>
+  <label htmlFor="live-url">Live URL</label>
+  <input
+    id="live_url"
+    name="live_url"
+    type="text"
+    value={projectForm.live_url}
+    onChange={handleProjectChange}
+  />
+</div>
+
+
+
   <button
     type="button"
     onClick={handleLogout}
