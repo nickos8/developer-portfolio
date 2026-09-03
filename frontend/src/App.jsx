@@ -51,6 +51,16 @@ function handleProjectChange(event) {
   }))
 }
 
+function handleProjectCheckboxChange(event) {
+  const { name, checked } = event.target
+
+  setProjectForm((currentForm) => ({
+    ...currentForm,
+    [name]: checked,
+  }))
+}
+
+
   async function handleLogin(event) {
     event.preventDefault()
 
@@ -180,6 +190,28 @@ function handleProjectChange(event) {
     type="text"
     value={projectForm.live_url}
     onChange={handleProjectChange}
+  />
+</div>
+
+<div>
+  <label htmlFor="project-is-featured">Featured</label>
+  <input
+    id="project-is-featured"
+    name="is_featured"
+    type="checkbox"
+    checked={projectForm.is_featured}
+    onChange={handleProjectCheckboxChange}
+  />
+</div>
+
+<div>
+  <label htmlFor="is-published">Published</label>
+  <input
+    id="is-published"
+    name="is_published"
+    type="checkbox"
+    checked={projectForm.is_published}
+    onChange={handleProjectCheckboxChange}
   />
 </div>
 
