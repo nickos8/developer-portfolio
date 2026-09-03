@@ -316,6 +316,26 @@ Next:
 7. refetch or update the project list
 8. separate components as the interface grows
 
+### In-progress work: `feature/react-project-form` branch (not yet merged to `main`)
+
+This branch is unmerged and not part of the verified `main` checkpoint above, but it contains real, pushed, lint-and-build-verified commits a future assistant must inspect before assuming `main` reflects everything in progress:
+
+- `ddb58a2` — controlled `title`, `short_description`, `description`, `tech_stack` fields and the shared `handleProjectChange` handler
+- `9d5def4` — controlled `github_url`, `live_url` fields (same handler)
+- `bddc571` — `is_featured`, `is_published` checkboxes and a second handler, `handleProjectCheckboxChange`, using `event.target.checked`
+
+Each commit was verified with `npm run lint` (0 warnings/errors) and `npm run build` (successful) before committing.
+
+Still missing on this branch before it satisfies items 1–8 above:
+
+- `display_order` input (a number input; `event.target.value` is always a string, not yet handled)
+- `tech_stack` is stored as one comma-separated string in state, but the backend requires an array (`'tech_stack' => ['required','array','min:1']`) — needs splitting/trimming/filtering before submit
+- no `<form>` element, no submit handler, and no call to `api.post('/api/projects', ...)` yet
+- no success/error message state for project creation (the login form's `message` pattern is the intended model to reuse)
+- minor cosmetic inconsistency in input `id`/`htmlFor` naming conventions across the new fields (not functionally blocking)
+
+Corresponding confirmed learning (the `[name]` computed-key pattern and the checkbox `.checked` vs `.value` distinction) is recorded in `docs/LEARNING_LOG.md`.
+
 ## 8. Verification evidence
 
 ### Manual browser and HTTP checks

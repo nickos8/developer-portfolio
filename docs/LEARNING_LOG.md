@@ -169,6 +169,52 @@ React state disappears after a browser refresh, but the session cookie may remai
 
 After Laravel destroys the session, React clears its local `user` state. Refreshing remains logged out because the old server session is invalid.
 
+## React project-creation form learning
+
+### One generic handler for many controlled inputs
+
+`projectForm` state starts from an `initialProjectForm` object whose keys mirror the fields `StoreProjectRequest` validates. Every plain text field shares one change handler instead of a separate handler per field:
+
+```js
+function handleProjectChange(event) {
+  const { name, value } = event.target
+
+  setProjectForm((currentForm) => ({
+    ...currentForm,
+    [name]: value,
+  }))
+}
+```
+
+This works only because of two separate mechanisms working together:
+
+- `event.target` is the actual DOM element the user just interacted with. Destructuring `name` and `value` off it reads that one element's `name` attribute and current text, whatever field fired the event.
+- `[name]` in the object literal is a *computed property name*. Square brackets tell JavaScript to use the string stored in the variable `name` as the key, not the literal word `name`. `{ name: value }` would always create a key literally called `"name"`; `{ [name]: value }` creates `title`, `github_url`, or whichever field actually changed.
+
+Both pieces are required: `event.target` supplies the string, `[name]` is what turns that string into a real object key. The handler is reusable across every text/textarea input only because each one is given a `name` attribute matching a key already present in `initialProjectForm`.
+
+### Checkboxes need `.checked`, not `.value` — and why they can't share a handler
+
+A checkbox's change event does not behave like a text input's:
+
+- `event.target.value` on a checkbox is not `undefined` — it defaults to the fixed string `"on"`, regardless of whether the box is ticked. There is no way to detect "was this a checkbox or a text field" by checking whether `.value` is set, because it is always set.
+- The real ticked/unticked state lives in `event.target.checked`, a genuine boolean.
+
+Because of this, a second handler is required:
+
+```js
+function handleProjectCheckboxChange(event) {
+  const { name, checked } = event.target
+
+  setProjectForm((currentForm) => ({
+    ...currentForm,
+    [name]: checked,
+  }))
+}
+```
+
+It reuses the identical `[name]` spread-and-overwrite pattern; the only difference is reading `checked` instead of `value`, because that is the property the browser actually populates for a checkbox. Matching this to `StoreProjectRequest`'s `'is_featured' => ['sometimes', 'boolean']` rule matters: storing the string `"on"` instead of a real boolean would either fail validation or send the wrong data type to the API.
+
 ## Development tools and verification
 
 ### Pint
