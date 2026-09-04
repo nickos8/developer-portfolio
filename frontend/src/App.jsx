@@ -176,7 +176,7 @@ function handleProjectCheckboxChange(event) {
   <input
     id="github_url"
     name="github_url"
-    type="text"
+    type="url"
     value={projectForm.github_url}
     onChange={handleProjectChange}
   />
@@ -215,6 +215,16 @@ function handleProjectCheckboxChange(event) {
   />
 </div>
 
+<div>
+  <label htmlFor="project-display-order">Display Order</label>
+  <input
+    id="project-display-order"
+    name="display_order"
+    type="number"
+    value={projectForm.display_order}
+    onChange={handleProjectChange}
+  />
+</div>
 
 
   <button
