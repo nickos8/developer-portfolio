@@ -138,7 +138,7 @@ async function handleProjectSubmit(event) {
   <p>Welcome, {user.name}.</p>
   <p>{message}</p>
 
-<form onSubmit={handleProjectSubmit}> 
+<form onSubmit={handleProjectSubmit}>
   <h2>Create Project</h2>
 
 <div>
