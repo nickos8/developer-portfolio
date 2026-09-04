@@ -318,23 +318,34 @@ Next:
 
 ### In-progress work: `feature/react-project-form` branch (not yet merged to `main`)
 
-This branch is unmerged and not part of the verified `main` checkpoint above, but it contains real, pushed, lint-and-build-verified commits a future assistant must inspect before assuming `main` reflects everything in progress:
+This branch is unmerged and not part of the verified `main` checkpoint above, but it contains real, pushed, lint-and-build-verified commits a future assistant must inspect before assuming `main` reflects everything in progress. **Working tree on this branch is clean as of the last commit below — nothing uncommitted is at risk.**
 
 - `ddb58a2` — controlled `title`, `short_description`, `description`, `tech_stack` fields and the shared `handleProjectChange` handler
 - `9d5def4` — controlled `github_url`, `live_url` fields (same handler)
 - `bddc571` — `is_featured`, `is_published` checkboxes and a second handler, `handleProjectCheckboxChange`, using `event.target.checked`
+- `81c33e6` — `display_order` number input (reuses `handleProjectChange`, no new handler needed — number inputs still use `.value`, unlike checkboxes); also switched `github_url` input to `type="url"`
+- `110a0b3` — `handleProjectSubmit`: wraps the fields in `<form onSubmit={handleProjectSubmit}>`, builds a type-correct payload (splits/trims/filters `tech_stack` into an array, converts `display_order` to a real `Number`), and `console.log`s it instead of calling the API yet
+- `1e99eaa` — whitespace-only fixup (a real trailing-whitespace error caught by `git diff --check`, not just the usual CRLF/LF notice)
 
-Each commit was verified with `npm run lint` (0 warnings/errors) and `npm run build` (successful) before committing.
+Each commit was verified with `npm run lint` (0 warnings/errors) and `npm run build` (successful) before committing. `110a0b3`'s payload shape was also manually verified in the browser console: submitting the form logged `tech_stack` as a real array and `display_order` as a real number (no quotes in the console), confirming the split/trim/filter and `Number()` conversion both work correctly against live typed input.
 
-Still missing on this branch before it satisfies items 1–8 above:
+Still missing on this branch before it satisfies items 1–8 in "Next frontend work" above:
 
-- `display_order` input (a number input; `event.target.value` is always a string, not yet handled)
-- `tech_stack` is stored as one comma-separated string in state, but the backend requires an array (`'tech_stack' => ['required','array','min:1']`) — needs splitting/trimming/filtering before submit
-- no `<form>` element, no submit handler, and no call to `api.post('/api/projects', ...)` yet
-- no success/error message state for project creation (the login form's `message` pattern is the intended model to reuse)
+- **The actual API call.** `handleProjectSubmit` still only `console.log`s the payload — it does not yet call `api.post('/api/projects', payload)`. This is the very next step.
+- No `isSubmittingProject` / `projectMessage` / `projectErrors` state yet, and no try/catch/finally around the API call. The exact next-step code (matching the `handleLogin` try/catch/finally pattern, plus `error.response.data.errors` handling for Laravel's `422` response shape) was given to the user in-session but **not yet applied to the file** — a future assistant should not assume it exists until verified in the actual working tree.
+- No display of per-field `422` validation errors next to each input yet (planned as the step after the API call is wired up).
+- No form reset after a successful submit yet (planned: `setProjectForm(initialProjectForm)`).
 - minor cosmetic inconsistency in input `id`/`htmlFor` naming conventions across the new fields (not functionally blocking)
 
-Corresponding confirmed learning (the `[name]` computed-key pattern and the checkbox `.checked` vs `.value` distinction) is recorded in `docs/LEARNING_LOG.md`.
+### Exact next action to resume
+
+1. Read `AGENTS.md` and this file's Section 10 resume procedure.
+2. On `feature/react-project-form`, add three `useState` declarations (`isSubmittingProject`, `projectMessage`, `projectErrors`) and rewrite `handleProjectSubmit` to actually call `api.post('/api/projects', payload)` inside a try/catch/finally, setting `projectErrors` from `error.response.data.errors` on a `422` and resetting the form on success.
+3. Update the submit button to show a loading label and disable while submitting, and render `projectMessage` beneath it.
+4. Manually verify in the browser: a valid submission creates a project and shows a success message with the form cleared; an invalid submission (e.g. empty title) shows "Please fix the errors below."
+5. Only after that: add per-field error display next to each input.
+
+Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, and why a number input's `.value` is still a string) is recorded in `docs/LEARNING_LOG.md`.
 
 ## 8. Verification evidence
 
