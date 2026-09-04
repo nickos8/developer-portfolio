@@ -60,6 +60,21 @@ function handleProjectCheckboxChange(event) {
   }))
 }
 
+async function handleProjectSubmit(event) {
+  event.preventDefault()
+
+  const payload = {
+    ...projectForm,
+    tech_stack: projectForm.tech_stack
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item !== ''),
+    display_order: Number(projectForm.display_order),
+  }
+
+  console.log(payload)
+}
+
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -123,7 +138,8 @@ function handleProjectCheckboxChange(event) {
   <p>Welcome, {user.name}.</p>
   <p>{message}</p>
 
-<h2>Create Project</h2>
+<form onSubmit={handleProjectSubmit}> 
+  <h2>Create Project</h2>
 
 <div>
   <label htmlFor="project-title">Title</label>
@@ -225,6 +241,9 @@ function handleProjectCheckboxChange(event) {
     onChange={handleProjectChange}
   />
 </div>
+<button type="submit">Create Project</button>
+</form>
+
 
 
   <button
