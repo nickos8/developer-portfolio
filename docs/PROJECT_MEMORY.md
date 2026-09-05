@@ -4,6 +4,8 @@
 >
 > Future assistant: read `AGENTS.md` and every document it references before changing the project. Inspect the working tree and tests because GitHub cannot contain uncommitted local work. Never document secrets.
 
+> A finished, deployable duplicate of this project exists separately -- see `docs/DEPLOYABLE_DUPLICATE.md`. It does not change anything below; this repository's own state is still exactly what this document and the working tree say it is.
+
 **Last updated:** 2026-09-01  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
