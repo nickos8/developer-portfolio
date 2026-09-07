@@ -24,7 +24,9 @@ function App() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isCheckingSession, setIsCheckingSession] = useState(true)
   const [projectForm, setProjectForm] = useState(initialProjectForm)
-
+  const [isSubmittingProject, setIsSubmittingProject] = useState(false)
+  const [projectMessage, setProjectMessage] = useState('')
+  const [projectErrors, setProjectErrors] = useState({})
 
   useEffect(() => {
     async function checkSession() {
@@ -63,6 +65,10 @@ function handleProjectCheckboxChange(event) {
 async function handleProjectSubmit(event) {
   event.preventDefault()
 
+  setIsSubmittingProject(true)
+  setProjectMessage('')
+  setProjectErrors({})
+
   const payload = {
     ...projectForm,
     tech_stack: projectForm.tech_stack
@@ -72,7 +78,21 @@ async function handleProjectSubmit(event) {
     display_order: Number(projectForm.display_order),
   }
 
-  console.log(payload)
+  try {
+    await api.post('/api/projects', payload)
+
+    setProjectForm(initialProjectForm)
+    setProjectMessage('Project created successfully.')
+  } catch (error) {
+    if (error.response?.status === 422) {
+      setProjectErrors(error.response.data.errors)
+      setProjectMessage('Please fix the errors below.')
+    } else {
+      setProjectMessage('Failed to create project.')
+    }
+  } finally {
+    setIsSubmittingProject(false)
+  }
 }
 
 
@@ -89,7 +109,6 @@ async function handleProjectSubmit(event) {
         email,
         password,
       })
-
       const response = await api.get('/api/user')
 
       setUser(response.data.user)
@@ -241,7 +260,10 @@ async function handleProjectSubmit(event) {
     onChange={handleProjectChange}
   />
 </div>
-<button type="submit">Create Project</button>
+<button type="submit" disabled={isSubmittingProject}>
+  {isSubmittingProject ? 'Creating...' : 'Create Project'}
+</button>
+{projectMessage && <p>{projectMessage}</p>}
 </form>
 
 
