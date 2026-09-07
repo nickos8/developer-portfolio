@@ -122,6 +122,12 @@
 
 **Reason:** React should treat Laravel's session as the authentication source of truth instead of assuming that local component state proves authentication.
 
+### Prettier for frontend formatting
+
+**Decision:** Add Prettier (`singleQuote: true`, `semi: false`, via `.prettierrc.json`) as a dev dependency with an `npm run format` script.
+
+**Reason:** `oxlint` catches code-quality problems (unused variables, rule violations) but does not rewrite formatting. The frontend had no automated formatter, so indentation and blank-line drift accumulated across manual edits. Prettier gives the frontend the same "run one command, formatting is fixed" workflow Pint already gives the backend. Settings match the style already used in `App.jsx` (single quotes, no semicolons) rather than Prettier's own defaults.
+
 ## Testing
 
 ### SQLite in-memory database

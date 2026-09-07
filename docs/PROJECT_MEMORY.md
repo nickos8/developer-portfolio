@@ -4,13 +4,14 @@
 >
 > Future assistant: read `AGENTS.md` and every document it references before changing the project. Inspect the working tree and tests because GitHub cannot contain uncommitted local work. Never document secrets.
 
-**Last updated:** 2026-09-01  
+**Last updated:** 2026-09-07  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
-**Latest verified code commit:** `a26b3e5` — **Add admin authentication and protected project creation**  
-**Current phase:** Authenticated Projects CRUD; create operation and session authentication complete  
-**Next exact feature:** Design and implement the authenticated project-management interface in React, beginning with a project creation form that displays Laravel validation errors  
-**Working tree at checkpoint:** Local `main` clean and synchronized with `origin/main`
+**Latest verified code commit on `main`:** `a26b3e5` — **Add admin authentication and protected project creation**  
+**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `0a23a3d` — **Fix label/id mismatches and add Prettier for formatting**  
+**Current phase:** Authenticated Projects CRUD; project-creation form is now fully wired to the API and manually verified end to end (success and failure paths both confirmed in the browser)  
+**Next exact feature:** Per-field `422` validation error display next to each input (the `projectErrors` state already exists and is populated, but nothing renders it yet)  
+**Working tree at checkpoint:** `claude/portfolio-project-review-absmbr` clean and synchronized with `origin/claude/portfolio-project-review-absmbr`; not yet merged to `main`
 
 ## 1. Purpose
 
@@ -316,36 +317,37 @@ Next:
 7. refetch or update the project list
 8. separate components as the interface grows
 
-### In-progress work: `feature/react-project-form` branch (not yet merged to `main`)
+### In-progress work: `claude/portfolio-project-review-absmbr` branch (not yet merged to `main`)
 
-This branch is unmerged and not part of the verified `main` checkpoint above, but it contains real, pushed, lint-and-build-verified commits a future assistant must inspect before assuming `main` reflects everything in progress. **Working tree on this branch is clean as of the last commit below — nothing uncommitted is at risk.**
+This branch absorbed `feature/react-project-form` (merged in) and is unmerged and not part of the verified `main` checkpoint above, but it contains real, pushed, lint-and-build-verified commits a future assistant must inspect before assuming `main` reflects everything in progress. **Working tree on this branch is clean as of the last commit below — nothing uncommitted is at risk.**
 
-- `ddb58a2` — controlled `title`, `short_description`, `description`, `tech_stack` fields and the shared `handleProjectChange` handler
-- `9d5def4` — controlled `github_url`, `live_url` fields (same handler)
-- `bddc571` — `is_featured`, `is_published` checkboxes and a second handler, `handleProjectCheckboxChange`, using `event.target.checked`
-- `81c33e6` — `display_order` number input (reuses `handleProjectChange`, no new handler needed — number inputs still use `.value`, unlike checkboxes); also switched `github_url` input to `type="url"`
-- `110a0b3` — `handleProjectSubmit`: wraps the fields in `<form onSubmit={handleProjectSubmit}>`, builds a type-correct payload (splits/trims/filters `tech_stack` into an array, converts `display_order` to a real `Number`), and `console.log`s it instead of calling the API yet
-- `1e99eaa` — whitespace-only fixup (a real trailing-whitespace error caught by `git diff --check`, not just the usual CRLF/LF notice)
+- `ddb58a2` … `1e99eaa` — controlled fields, checkboxes, display order input, and the initial type-correct payload build (`console.log`-only submit). See prior checkpoint notes below this section for the original per-commit breakdown.
+- `fa5ca64` — `handleProjectSubmit` now actually calls `api.post('/api/projects', payload)` inside try/catch/finally: added `isSubmittingProject`, `projectMessage`, `projectErrors` state; resets the form with `setProjectForm(initialProjectForm)` and shows "Project created successfully." on success; on a `422` stores `error.response.data.errors` in `projectErrors` and shows "Please fix the errors below."; any other error shows "Failed to create project."; submit button disables and shows "Creating..." while in flight
+- `0a23a3d` — fixed a real accessibility bug (GitHub URL and Live URL `<label htmlFor>` values didn't match their input `id`s — `github-url` vs `github_url`, `live-url` vs `live_url`), added Prettier as a dev dependency with a `format` script (mirrors Pint's role on the backend) and a `.prettierrc.json` (`singleQuote`, no semicolons), and reformatted `App.jsx` (indentation, blank lines, trailing whitespace) with it
 
-Each commit was verified with `npm run lint` (0 warnings/errors) and `npm run build` (successful) before committing. `110a0b3`'s payload shape was also manually verified in the browser console: submitting the form logged `tech_stack` as a real array and `display_order` as a real number (no quotes in the console), confirming the split/trim/filter and `Number()` conversion both work correctly against live typed input.
+All manually verified in the browser on this checkpoint:
 
-Still missing on this branch before it satisfies items 1–8 in "Next frontend work" above:
+- valid submission → project created, "Project created successfully." shown, form fields and both checkboxes reset to empty/unchecked
+- invalid submission (empty title) → `422` response confirmed in the Network tab and browser console, "Please fix the errors below." shown, form correctly stays populated (only a successful submit clears it)
+- DevTools accessibility warning ("Incorrect use of `<label for=FORM_ELEMENT>`, 2 resources") is resolved by the `0a23a3d` label/id fix
 
-- **The actual API call.** `handleProjectSubmit` still only `console.log`s the payload — it does not yet call `api.post('/api/projects', payload)`. This is the very next step.
-- No `isSubmittingProject` / `projectMessage` / `projectErrors` state yet, and no try/catch/finally around the API call. The exact next-step code (matching the `handleLogin` try/catch/finally pattern, plus `error.response.data.errors` handling for Laravel's `422` response shape) was given to the user in-session but **not yet applied to the file** — a future assistant should not assume it exists until verified in the actual working tree.
-- No display of per-field `422` validation errors next to each input yet (planned as the step after the API call is wired up).
-- No form reset after a successful submit yet (planned: `setProjectForm(initialProjectForm)`).
-- minor cosmetic inconsistency in input `id`/`htmlFor` naming conventions across the new fields (not functionally blocking)
+`npm run lint` at this checkpoint shows exactly one warning, expected and not yet fixed on purpose: `projectErrors` is declared but never read, because nothing renders it yet. It will clear itself once per-field error display is implemented.
+
+Still missing before this branch satisfies items 1–8 in "Next frontend work" above:
+
+- **Per-field `422` validation error display next to each input.** `projectErrors` is populated on failure but nothing reads it in JSX yet. This is the very next step.
+- refetch or update the project list after creation (not started)
+- separate components as the interface grows (not started)
 
 ### Exact next action to resume
 
 1. Read `AGENTS.md` and this file's Section 10 resume procedure.
-2. On `feature/react-project-form`, add three `useState` declarations (`isSubmittingProject`, `projectMessage`, `projectErrors`) and rewrite `handleProjectSubmit` to actually call `api.post('/api/projects', payload)` inside a try/catch/finally, setting `projectErrors` from `error.response.data.errors` on a `422` and resetting the form on success.
-3. Update the submit button to show a loading label and disable while submitting, and render `projectMessage` beneath it.
-4. Manually verify in the browser: a valid submission creates a project and shows a success message with the form cleared; an invalid submission (e.g. empty title) shows "Please fix the errors below."
-5. Only after that: add per-field error display next to each input.
+2. On `claude/portfolio-project-review-absmbr`, render `projectErrors[fieldName]` beneath each corresponding input (Laravel returns `{ field: ["message", ...] }` for a `422`).
+3. Manually verify in the browser: submitting with an empty title shows the specific message next to the Title field, not just the generic "Please fix the errors below." banner.
+4. Confirm the `projectErrors` unused-variable lint warning is gone.
+5. Consider merging this branch to `main` once the create flow (including per-field errors) is complete, per the roadmap in Section 11.
 
-Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, and why a number input's `.value` is still a string) is recorded in `docs/LEARNING_LOG.md`.
+Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, why a number input's `.value` is still a string, and the label/id accessibility contract) is recorded in `docs/LEARNING_LOG.md`.
 
 ## 8. Verification evidence
 

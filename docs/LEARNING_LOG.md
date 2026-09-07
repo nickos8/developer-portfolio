@@ -215,6 +215,38 @@ function handleProjectCheckboxChange(event) {
 
 It reuses the identical `[name]` spread-and-overwrite pattern; the only difference is reading `checked` instead of `value`, because that is the property the browser actually populates for a checkbox. Matching this to `StoreProjectRequest`'s `'is_featured' => ['sometimes', 'boolean']` rule matters: storing the string `"on"` instead of a real boolean would either fail validation or send the wrong data type to the API.
 
+### Wiring the submit handler to a real API call
+
+`handleProjectSubmit` follows the same try/catch/finally shape as `handleLogin`, because both are "call the API, then react to what came back" operations:
+
+```js
+try {
+  await api.post('/api/projects', payload)
+  setProjectForm(initialProjectForm)
+  setProjectMessage('Project created successfully.')
+} catch (error) {
+  if (error.response?.status === 422) {
+    setProjectErrors(error.response.data.errors)
+    setProjectMessage('Please fix the errors below.')
+  } else {
+    setProjectMessage('Failed to create project.')
+  }
+} finally {
+  setIsSubmittingProject(false)
+}
+```
+
+Two things matter here:
+
+- Laravel's `422` response body has the shape `{ message, errors: { field: [messages] } }`. `error.response.data.errors` is that per-field object, stored as-is so it can later be rendered next to each input. Checking `error.response?.status === 422` specifically (rather than treating every error the same) is what lets the form distinguish "you typed something invalid" from "the server or network failed."
+- `finally` runs whether the try succeeded or the catch fired, which is why `setIsSubmittingProject(false)` lives there instead of being duplicated at the end of both branches. This is the same reason `isSubmittingProject` disables the button and swaps its label during the request: it is set to `true` before the `try`, not inside it.
+
+Only a form reset on success (not on failure) is correct: a failed submission's data is still wrong and the user needs to see and fix it, not retype it.
+
+### Label `htmlFor` must match input `id` exactly, or accessibility tooling breaks silently
+
+A `<label htmlFor="github-url">` paired with `<input id="github_url">` renders with no visible error, the page looks completely normal. The mismatch only surfaces as a DevTools accessibility warning ("Incorrect use of `<label for=FORM_ELEMENT>`"), because the browser can no longer connect that label to that input for screen readers or click-to-focus. The fix is exact string equality between the two attributes, nothing more. This is easy to introduce because hyphenated and underscored versions of the same field name both look plausible at a glance.
+
 ## Development tools and verification
 
 ### Pint
@@ -255,6 +287,7 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 
 - `npm run lint` checks frontend code rules.
 - `npm run build` proves Vite can create a production bundle.
+- `npm run format` (Prettier) rewrites indentation, blank lines, and quote/semicolon style automatically. This is the frontend equivalent of Pint: it fixes how code looks, not whether it is correct. A real bug (like a mismatched `id`/`htmlFor`) still needs a human or a different tool to catch it.
 
 ### Git checks
 
@@ -268,7 +301,7 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 - project show, update, and delete endpoints
 - route-model binding
 - update-specific validation
-- React form state and displaying backend validation errors
+- rendering per-field `422` validation errors next to each input (the data is already captured in `projectErrors`, only the display is missing)
 - API resource classes
 - image upload and storage
 - CI/CD
