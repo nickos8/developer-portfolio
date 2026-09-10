@@ -26,6 +26,9 @@ function App() {
   const [isSubmittingProject, setIsSubmittingProject] = useState(false)
   const [projectMessage, setProjectMessage] = useState('')
   const [projectErrors, setProjectErrors] = useState({})
+  const [projects, setProjects] = useState([])
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false)
+  const [projectsError, setProjectsError] = useState('')
 
   useEffect(() => {
     async function checkSession() {
@@ -42,6 +45,27 @@ function App() {
 
     checkSession()
   }, [])
+
+  useEffect(() => {
+    if (user) {
+      fetchProjects()
+    }
+  }, [user])
+
+  async function fetchProjects() {
+    setIsLoadingProjects(true)
+    setProjectsError('')
+
+    try {
+      const response = await api.get('/api/projects')
+
+      setProjects(response.data)
+    } catch {
+      setProjectsError('Failed to load projects.')
+    } finally {
+      setIsLoadingProjects(false)
+    }
+  }
 
   function handleProjectChange(event) {
     const { name, value } = event.target
@@ -82,6 +106,7 @@ function App() {
 
       setProjectForm(initialProjectForm)
       setProjectMessage('Project created successfully.')
+      fetchProjects()
     } catch (error) {
       if (error.response?.status === 422) {
         setProjectErrors(error.response.data.errors)
@@ -282,6 +307,23 @@ function App() {
             </button>
             {projectMessage && <p>{projectMessage}</p>}
           </form>
+
+          <section>
+            <h2>Published Projects</h2>
+            {isLoadingProjects && <p>Loading projects...</p>}
+            {projectsError && <p>{projectsError}</p>}
+            {!isLoadingProjects && !projectsError && projects.length === 0 && (
+              <p>No published projects yet.</p>
+            )}
+            <ul>
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <h3>{project.title}</h3>
+                  <p>{project.short_description}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
 
           <button type="button" onClick={handleLogout} disabled={isLoggingOut}>
             {isLoggingOut ? 'Logging out...' : 'Log out'}
