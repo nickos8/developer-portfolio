@@ -167,6 +167,7 @@ function App() {
                 value={projectForm.title}
                 onChange={handleProjectChange}
               />
+              {projectErrors.title && <p>{projectErrors.title[0]}</p>}
             </div>
 
             <div>
@@ -180,6 +181,9 @@ function App() {
                 onChange={handleProjectChange}
                 maxLength="300"
               />
+              {projectErrors.short_description && (
+                <p>{projectErrors.short_description[0]}</p>
+              )}
             </div>
 
             <div>
@@ -190,6 +194,9 @@ function App() {
                 value={projectForm.description}
                 onChange={handleProjectChange}
               />
+              {projectErrors.description && (
+                <p>{projectErrors.description[0]}</p>
+              )}
             </div>
 
             <div>
@@ -202,6 +209,7 @@ function App() {
                 onChange={handleProjectChange}
                 placeholder="Laravel, React, PostgreSQL"
               />
+              {projectErrors.tech_stack && <p>{projectErrors.tech_stack[0]}</p>}
             </div>
 
             <div>
@@ -213,6 +221,7 @@ function App() {
                 value={projectForm.github_url}
                 onChange={handleProjectChange}
               />
+              {projectErrors.github_url && <p>{projectErrors.github_url[0]}</p>}
             </div>
 
             <div>
@@ -224,6 +233,7 @@ function App() {
                 value={projectForm.live_url}
                 onChange={handleProjectChange}
               />
+              {projectErrors.live_url && <p>{projectErrors.live_url[0]}</p>}
             </div>
 
             <div>
@@ -235,6 +245,9 @@ function App() {
                 checked={projectForm.is_featured}
                 onChange={handleProjectCheckboxChange}
               />
+              {projectErrors.is_featured && (
+                <p>{projectErrors.is_featured[0]}</p>
+              )}
             </div>
 
             <div>
@@ -246,6 +259,9 @@ function App() {
                 checked={projectForm.is_published}
                 onChange={handleProjectCheckboxChange}
               />
+              {projectErrors.is_published && (
+                <p>{projectErrors.is_published[0]}</p>
+              )}
             </div>
 
             <div>
@@ -257,6 +273,9 @@ function App() {
                 value={projectForm.display_order}
                 onChange={handleProjectChange}
               />
+              {projectErrors.display_order && (
+                <p>{projectErrors.display_order[0]}</p>
+              )}
             </div>
             <button type="submit" disabled={isSubmittingProject}>
               {isSubmittingProject ? 'Creating...' : 'Create Project'}
