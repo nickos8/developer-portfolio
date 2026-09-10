@@ -255,6 +255,21 @@ Once `projectErrors` holds Laravel's `{ field: [messages] }` object, showing one
 
 This is the same field-name-must-match-exactly requirement as `htmlFor`/`id` and `name`/state-key: `projectErrors.title` only works because the backend's validation error key and this JSX property access use the identical string `title`.
 
+### Two different triggers for "go refetch the data"
+
+`useEffect(() => { if (user) fetchProjects() }, [user])` only reruns when something in its dependency array actually changes value. It is not a general "something happened" watcher, it watches one specific variable. Creating a project does not change `user` at all (same logged-in person before and after), so this effect has no reason to fire again after a create, the same way a smoke detector doesn't react to a door slamming.
+
+Because of that, a second, independent trigger is needed: a direct call to `fetchProjects()` written as the next line after a successful `api.post()` inside `handleProjectSubmit`. This isn't reacting to a dependency change, it's an explicit "this specific event means the data is now stale" instruction. Two different events (login succeeding vs. a create succeeding) need two different triggers, because only one of them touches `user`.
+
+### The `key` prop when rendering a list
+
+```jsx
+{projects.map((project) => (
+  <li key={project.id}>
+```
+
+React needs a stable, unique `key` on each item in a rendered list so it can track which DOM element corresponds to which array item across re-renders, otherwise it can misattribute state or content between items after the list changes (a create, a delete, a reorder). `project.id` from the database is a correct choice: guaranteed unique and stable, unlike using the array index, which shifts if items are added, removed, or reordered.
+
 ### Label `htmlFor` must match input `id` exactly, or accessibility tooling breaks silently
 
 A `<label htmlFor="github-url">` paired with `<input id="github_url">` renders with no visible error, the page looks completely normal. The mismatch only surfaces as a DevTools accessibility warning ("Incorrect use of `<label for=FORM_ELEMENT>`"), because the browser can no longer connect that label to that input for screen readers or click-to-focus. The fix is exact string equality between the two attributes, nothing more. This is easy to introduce because hyphenated and underscored versions of the same field name both look plausible at a glance.
@@ -313,8 +328,9 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 - project show, update, and delete endpoints
 - route-model binding
 - update-specific validation
-- fetching and rendering the existing project list in React (`GET /api/projects` has no frontend consumer yet)
+- backend `show`, `update`, `destroy` endpoints with feature tests
 - splitting `App.jsx` into separate components as the interface grows
+- an admin-specific listing that includes unpublished projects (current list reuses the public, published-only endpoint)
 - API resource classes
 - image upload and storage
 - CI/CD

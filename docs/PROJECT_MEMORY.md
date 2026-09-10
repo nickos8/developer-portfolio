@@ -8,9 +8,9 @@
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
 **Latest verified code commit on `main`:** `a26b3e5` — **Add admin authentication and protected project creation**  
-**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `2c67a2d` — **Display per-field validation errors on the project form**  
-**Current phase:** Authenticated Projects CRUD; the project-creation form is functionally complete — wired to the API, shows a generic banner and per-field messages on `422`, resets and confirms on success. Manually verified end to end in the browser.  
-**Next exact feature:** Decide between (a) fetching and displaying the existing project list after creation, giving the form a visible feedback loop, or (b) starting the backend `show`/`update`/`destroy` endpoints to round out CRUD. See Section 11 roadmap.  
+**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `e3860be` — **Fetch and display the project list after login and after create**  
+**Current phase:** Authenticated Projects CRUD; the project-creation form is functionally complete (API wiring, generic and per-field `422` errors, reset and confirm on success) and the admin view now also fetches and displays the published project list, refetching automatically right after a successful create. Manually verified end to end in the browser, including that a newly created published project appears immediately without a page refresh.  
+**Next exact feature:** Backend CRUD completion (`show`, `update`, `destroy` on `ProjectController`, each with feature tests) is now the natural next step, since the React side of "create and see your projects" is done. See Section 11 roadmap.  
 **Working tree at checkpoint:** `claude/portfolio-project-review-absmbr` clean and synchronized with `origin/claude/portfolio-project-review-absmbr`; not yet merged to `main`
 
 ## 1. Purpose
@@ -314,7 +314,7 @@ Next:
 4. submit through the shared API client — done
 5. display Laravel `422` field errors — done (generic banner plus a per-field message under each input)
 6. show successful creation response — done
-7. refetch or update the project list — not started
+7. refetch or update the project list — done
 8. separate components as the interface grows — not started
 
 ### In-progress work: `claude/portfolio-project-review-absmbr` branch (not yet merged to `main`)
@@ -332,23 +332,23 @@ All manually verified in the browser on this checkpoint:
 - DevTools accessibility warning ("Incorrect use of `<label for=FORM_ELEMENT>`, 2 resources") is resolved by the `0a23a3d` label/id fix
 
 - `2c67a2d` — renders `projectErrors[field][0]` beneath every validated input (`title`, `short_description`, `description`, `tech_stack`, `github_url`, `live_url`, `is_featured`, `is_published`, `display_order`). Manually verified: submitting with an empty title now shows "The title field is required." directly under that field, in addition to the existing "Please fix the errors below." banner. `npm run lint` is fully clean (0 warnings) now that `projectErrors` is actually read.
+- `e3860be` — added `projects`, `isLoadingProjects`, `projectsError` state and a `fetchProjects()` function that calls `GET /api/projects` (the existing public, `is_published`-only endpoint). Two triggers call it: a `useEffect` with dependency `[user]` (fires once when login succeeds) and a direct call at the end of `handleProjectSubmit`'s success branch (fires after every successful create, since creating a project does not change `user` and so cannot rely on the effect alone). Renders the result as a "Published Projects" list with a loading state, an error state, and an empty state. Manually verified: existing published projects appear after login; a newly created project with `is_published` checked appears immediately with no page refresh; a project created with `is_published` unchecked saves successfully but correctly does not appear in this list (expected, since `ProjectController@index` filters to published only — this is a known, accepted limitation of reusing the public endpoint for the admin view, not a bug).
 
-The project-creation form is now functionally complete against items 1–6 in "Next frontend work" above.
+The project-creation and project-viewing flow is now functionally complete against items 1–7 in "Next frontend work" above.
 
 Still missing before this branch satisfies all of items 1–8:
 
-- refetch or update the project list after creation (not started) — right now a successful create gives no visible confirmation beyond the success message; there is nowhere in the UI yet to see the projects that exist
-- separate components as the interface grows (not started) — `App.jsx` holds both auth and the entire project form in one file
+- separate components as the interface grows (not started) — `App.jsx` holds auth, the entire project form, and the project list in one file
+- an admin-specific listing that also shows unpublished projects (not started, not in the original 1–8 list either, but a real gap now that the admin list only shows what a public visitor would see) — would need a new protected endpoint, since `GET /api/projects` is intentionally public and published-only
 
 ### Exact next action to resume
 
 1. Read `AGENTS.md` and this file's Section 10 resume procedure.
-2. Choose a direction (ask the project owner if unclear):
-   - **Frontend-first:** fetch `GET /api/projects` after login (or after a successful create) and render the list, so the create form has a visible result.
-   - **Backend-first:** implement `show`, `update`, `destroy` on `ProjectController` with feature tests, rounding out CRUD before more frontend work.
-3. Consider merging this branch to `main` once whichever direction is chosen reaches its own verified checkpoint — the create flow itself is already complete and stable.
+2. Implement the backend `show`, `update`, `destroy` actions on `ProjectController`, each with feature tests (guest rejected, authenticated session allowed, not-found handling, validation on update).
+3. Optionally revisit whether the admin view should see unpublished projects too (a protected listing endpoint), likely alongside the `update`/`destroy` UI work.
+4. Consider merging this branch to `main` once backend CRUD reaches its own verified checkpoint — the full create-and-view flow is already complete and stable.
 
-Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, why a number input's `.value` is still a string, and the label/id accessibility contract) is recorded in `docs/LEARNING_LOG.md`.
+Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, why a number input's `.value` is still a string, the label/id accessibility contract, and the two-trigger `useEffect`-plus-manual-call fetch pattern) is recorded in `docs/LEARNING_LOG.md`.
 
 ## 8. Verification evidence
 
@@ -438,7 +438,7 @@ Vite production build completed successfully.
 | Credentialed CORS | Complete |
 | Authentication tests | Complete |
 | Project creation tests | Complete |
-| React project creation form | Complete (create only; list/edit/delete not started) |
+| React project creation form | Complete (create + list; edit/delete not started) |
 | Public portfolio design | Not started |
 | Project show endpoint | Not started |
 | Project update endpoint | Not started |
@@ -490,7 +490,7 @@ npm run build
 - [x] Validated create
 - [x] Protected create route
 - [x] Backend create tests
-- [ ] React create interface
+- [x] React create interface (create + list; components not yet split up)
 - [ ] Single-project read
 - [ ] Validated update
 - [ ] Delete
