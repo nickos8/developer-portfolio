@@ -243,6 +243,18 @@ Two things matter here:
 
 Only a form reset on success (not on failure) is correct: a failed submission's data is still wrong and the user needs to see and fix it, not retype it.
 
+### Rendering per-field `422` errors
+
+Once `projectErrors` holds Laravel's `{ field: [messages] }` object, showing one under a specific input is a small, repeatable pattern:
+
+```jsx
+{projectErrors.title && <p>{projectErrors.title[0]}</p>}
+```
+
+`projectErrors.title` is an array (Laravel always returns an array of messages per field, even for one message), so `[0]` picks the first. The `&&` guard matters because `projectErrors.title` is `undefined` for any field with no error, and `undefined && <p>...</p>` short-circuits to `undefined`, which React renders as nothing, no crash from trying to index into a field that never had an error.
+
+This is the same field-name-must-match-exactly requirement as `htmlFor`/`id` and `name`/state-key: `projectErrors.title` only works because the backend's validation error key and this JSX property access use the identical string `title`.
+
 ### Label `htmlFor` must match input `id` exactly, or accessibility tooling breaks silently
 
 A `<label htmlFor="github-url">` paired with `<input id="github_url">` renders with no visible error, the page looks completely normal. The mismatch only surfaces as a DevTools accessibility warning ("Incorrect use of `<label for=FORM_ELEMENT>`"), because the browser can no longer connect that label to that input for screen readers or click-to-focus. The fix is exact string equality between the two attributes, nothing more. This is easy to introduce because hyphenated and underscored versions of the same field name both look plausible at a glance.
@@ -301,7 +313,8 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 - project show, update, and delete endpoints
 - route-model binding
 - update-specific validation
-- rendering per-field `422` validation errors next to each input (the data is already captured in `projectErrors`, only the display is missing)
+- fetching and rendering the existing project list in React (`GET /api/projects` has no frontend consumer yet)
+- splitting `App.jsx` into separate components as the interface grows
 - API resource classes
 - image upload and storage
 - CI/CD

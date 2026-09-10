@@ -4,13 +4,13 @@
 >
 > Future assistant: read `AGENTS.md` and every document it references before changing the project. Inspect the working tree and tests because GitHub cannot contain uncommitted local work. Never document secrets.
 
-**Last updated:** 2026-09-07  
+**Last updated:** 2026-09-10  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
 **Latest verified code commit on `main`:** `a26b3e5` — **Add admin authentication and protected project creation**  
-**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `0a23a3d` — **Fix label/id mismatches and add Prettier for formatting**  
-**Current phase:** Authenticated Projects CRUD; project-creation form is now fully wired to the API and manually verified end to end (success and failure paths both confirmed in the browser)  
-**Next exact feature:** Per-field `422` validation error display next to each input (the `projectErrors` state already exists and is populated, but nothing renders it yet)  
+**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `2c67a2d` — **Display per-field validation errors on the project form**  
+**Current phase:** Authenticated Projects CRUD; the project-creation form is functionally complete — wired to the API, shows a generic banner and per-field messages on `422`, resets and confirms on success. Manually verified end to end in the browser.  
+**Next exact feature:** Decide between (a) fetching and displaying the existing project list after creation, giving the form a visible feedback loop, or (b) starting the backend `show`/`update`/`destroy` endpoints to round out CRUD. See Section 11 roadmap.  
 **Working tree at checkpoint:** `claude/portfolio-project-review-absmbr` clean and synchronized with `origin/claude/portfolio-project-review-absmbr`; not yet merged to `main`
 
 ## 1. Purpose
@@ -308,14 +308,14 @@ The current `App.jsx` is an authentication proof-of-flow, not the final portfoli
 
 Next:
 
-1. authenticated project creation form
-2. controlled inputs for every validated field
-3. dynamic technology list or a clear initial input strategy
-4. submit through the shared API client
-5. display Laravel `422` field errors
-6. show successful creation response
-7. refetch or update the project list
-8. separate components as the interface grows
+1. authenticated project creation form — done
+2. controlled inputs for every validated field — done
+3. dynamic technology list or a clear initial input strategy — done (comma-separated text input, split/trimmed/filtered into an array on submit)
+4. submit through the shared API client — done
+5. display Laravel `422` field errors — done (generic banner plus a per-field message under each input)
+6. show successful creation response — done
+7. refetch or update the project list — not started
+8. separate components as the interface grows — not started
 
 ### In-progress work: `claude/portfolio-project-review-absmbr` branch (not yet merged to `main`)
 
@@ -331,21 +331,22 @@ All manually verified in the browser on this checkpoint:
 - invalid submission (empty title) → `422` response confirmed in the Network tab and browser console, "Please fix the errors below." shown, form correctly stays populated (only a successful submit clears it)
 - DevTools accessibility warning ("Incorrect use of `<label for=FORM_ELEMENT>`, 2 resources") is resolved by the `0a23a3d` label/id fix
 
-`npm run lint` at this checkpoint shows exactly one warning, expected and not yet fixed on purpose: `projectErrors` is declared but never read, because nothing renders it yet. It will clear itself once per-field error display is implemented.
+- `2c67a2d` — renders `projectErrors[field][0]` beneath every validated input (`title`, `short_description`, `description`, `tech_stack`, `github_url`, `live_url`, `is_featured`, `is_published`, `display_order`). Manually verified: submitting with an empty title now shows "The title field is required." directly under that field, in addition to the existing "Please fix the errors below." banner. `npm run lint` is fully clean (0 warnings) now that `projectErrors` is actually read.
 
-Still missing before this branch satisfies items 1–8 in "Next frontend work" above:
+The project-creation form is now functionally complete against items 1–6 in "Next frontend work" above.
 
-- **Per-field `422` validation error display next to each input.** `projectErrors` is populated on failure but nothing reads it in JSX yet. This is the very next step.
-- refetch or update the project list after creation (not started)
-- separate components as the interface grows (not started)
+Still missing before this branch satisfies all of items 1–8:
+
+- refetch or update the project list after creation (not started) — right now a successful create gives no visible confirmation beyond the success message; there is nowhere in the UI yet to see the projects that exist
+- separate components as the interface grows (not started) — `App.jsx` holds both auth and the entire project form in one file
 
 ### Exact next action to resume
 
 1. Read `AGENTS.md` and this file's Section 10 resume procedure.
-2. On `claude/portfolio-project-review-absmbr`, render `projectErrors[fieldName]` beneath each corresponding input (Laravel returns `{ field: ["message", ...] }` for a `422`).
-3. Manually verify in the browser: submitting with an empty title shows the specific message next to the Title field, not just the generic "Please fix the errors below." banner.
-4. Confirm the `projectErrors` unused-variable lint warning is gone.
-5. Consider merging this branch to `main` once the create flow (including per-field errors) is complete, per the roadmap in Section 11.
+2. Choose a direction (ask the project owner if unclear):
+   - **Frontend-first:** fetch `GET /api/projects` after login (or after a successful create) and render the list, so the create form has a visible result.
+   - **Backend-first:** implement `show`, `update`, `destroy` on `ProjectController` with feature tests, rounding out CRUD before more frontend work.
+3. Consider merging this branch to `main` once whichever direction is chosen reaches its own verified checkpoint — the create flow itself is already complete and stable.
 
 Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, why a number input's `.value` is still a string, and the label/id accessibility contract) is recorded in `docs/LEARNING_LOG.md`.
 
@@ -437,7 +438,7 @@ Vite production build completed successfully.
 | Credentialed CORS | Complete |
 | Authentication tests | Complete |
 | Project creation tests | Complete |
-| React project creation form | Next |
+| React project creation form | Complete (create only; list/edit/delete not started) |
 | Public portfolio design | Not started |
 | Project show endpoint | Not started |
 | Project update endpoint | Not started |
