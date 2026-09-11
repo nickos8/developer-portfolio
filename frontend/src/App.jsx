@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react'
 import api from './api'
 import './App.css'
 
+const initialProjectForm = {
+  title: '',
+  short_description: '',
+  description: '',
+  tech_stack: '',
+  github_url: '',
+  live_url: '',
+  is_featured: false,
+  is_published: false,
+  display_order: 0,
+}
+
 function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -10,6 +22,10 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isCheckingSession, setIsCheckingSession] = useState(true)
+  const [projectForm, setProjectForm] = useState(initialProjectForm)
+  const [isSubmittingProject, setIsSubmittingProject] = useState(false)
+  const [projectMessage, setProjectMessage] = useState('')
+  const [projectErrors, setProjectErrors] = useState({})
 
   useEffect(() => {
     async function checkSession() {
@@ -26,6 +42,57 @@ function App() {
 
     checkSession()
   }, [])
+
+  function handleProjectChange(event) {
+    const { name, value } = event.target
+
+    setProjectForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }))
+  }
+
+  function handleProjectCheckboxChange(event) {
+    const { name, checked } = event.target
+
+    setProjectForm((currentForm) => ({
+      ...currentForm,
+      [name]: checked,
+    }))
+  }
+
+  async function handleProjectSubmit(event) {
+    event.preventDefault()
+
+    setIsSubmittingProject(true)
+    setProjectMessage('')
+    setProjectErrors({})
+
+    const payload = {
+      ...projectForm,
+      tech_stack: projectForm.tech_stack
+        .split(',')
+        .map((item) => item.trim())
+        .filter((item) => item !== ''),
+      display_order: Number(projectForm.display_order),
+    }
+
+    try {
+      await api.post('/api/projects', payload)
+
+      setProjectForm(initialProjectForm)
+      setProjectMessage('Project created successfully.')
+    } catch (error) {
+      if (error.response?.status === 422) {
+        setProjectErrors(error.response.data.errors)
+        setProjectMessage('Please fix the errors below.')
+      } else {
+        setProjectMessage('Failed to create project.')
+      }
+    } finally {
+      setIsSubmittingProject(false)
+    }
+  }
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -86,17 +153,148 @@ function App() {
 
       {user ? (
         <section>
-  <p>Welcome, {user.name}.</p>
-  <p>{message}</p>
+          <p>Welcome, {user.name}.</p>
+          <p>{message}</p>
 
-  <button
-    type="button"
-    onClick={handleLogout}
-    disabled={isLoggingOut}
-  >
-    {isLoggingOut ? 'Logging out...' : 'Log out'}
-  </button>
-</section>
+          <form onSubmit={handleProjectSubmit}>
+            <h2>Create Project</h2>
+
+            <div>
+              <label htmlFor="project-title">Title</label>
+              <input
+                id="project-title"
+                name="title"
+                type="text"
+                value={projectForm.title}
+                onChange={handleProjectChange}
+              />
+              {projectErrors.title && <p>{projectErrors.title[0]}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="project-short-description">
+                Short description
+              </label>
+              <textarea
+                id="project-short-description"
+                name="short_description"
+                value={projectForm.short_description}
+                onChange={handleProjectChange}
+                maxLength={300}
+              />
+              {projectErrors.short_description && (
+                <p>{projectErrors.short_description[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="project-description">Description</label>
+              <textarea
+                id="project-description"
+                name="description"
+                value={projectForm.description}
+                onChange={handleProjectChange}
+              />
+              {projectErrors.description && (
+                <p>{projectErrors.description[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="project-tech-stack">
+                Technology stack (comma-separated)
+              </label>
+              <input
+                id="project-tech-stack"
+                name="tech_stack"
+                type="text"
+                value={projectForm.tech_stack}
+                onChange={handleProjectChange}
+                placeholder="Laravel, React, PostgreSQL"
+              />
+              {projectErrors.tech_stack && (
+                <p>{projectErrors.tech_stack[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="project-github-url">GitHub URL</label>
+              <input
+                id="project-github-url"
+                name="github_url"
+                type="url"
+                value={projectForm.github_url}
+                onChange={handleProjectChange}
+              />
+              {projectErrors.github_url && (
+                <p>{projectErrors.github_url[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="project-live-url">Live URL</label>
+              <input
+                id="project-live-url"
+                name="live_url"
+                type="url"
+                value={projectForm.live_url}
+                onChange={handleProjectChange}
+              />
+              {projectErrors.live_url && <p>{projectErrors.live_url[0]}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="project-is-featured">Featured</label>
+              <input
+                id="project-is-featured"
+                name="is_featured"
+                type="checkbox"
+                checked={projectForm.is_featured}
+                onChange={handleProjectCheckboxChange}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="project-is-published">Published</label>
+              <input
+                id="project-is-published"
+                name="is_published"
+                type="checkbox"
+                checked={projectForm.is_published}
+                onChange={handleProjectCheckboxChange}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="project-display-order">Display order</label>
+              <input
+                id="project-display-order"
+                name="display_order"
+                type="number"
+                min="0"
+                value={projectForm.display_order}
+                onChange={handleProjectChange}
+              />
+              {projectErrors.display_order && (
+                <p>{projectErrors.display_order[0]}</p>
+              )}
+            </div>
+
+            <button type="submit" disabled={isSubmittingProject}>
+              {isSubmittingProject ? 'Creating...' : 'Create Project'}
+            </button>
+
+            {projectMessage && <p>{projectMessage}</p>}
+          </form>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? 'Logging out...' : 'Log out'}
+          </button>
+        </section>
       ) : (
         <form onSubmit={handleLogin}>
           <div>
