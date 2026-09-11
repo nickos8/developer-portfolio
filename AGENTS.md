@@ -16,8 +16,7 @@ Before suggesting or changing anything:
    - `git log --oneline --decorate -10`
    - relevant source files, routes, tests, and configuration
 7. Compare the working tree with the documented checkpoint.
-8. Give a short "here's where we left off" recap (last verified checkpoint, what's next) before doing anything else. This recap is mandatory at the start of every session, even if the user doesn't ask for it — do not make the user hold prior context in their head.
-9. Report the current state and safest next action before modifying anything.
+8. Report the current state and safest next action before modifying anything.
 
 The working tree and test results are the source of truth. Documentation is a handoff aid and may be older than local, uncommitted work.
 
@@ -29,31 +28,21 @@ The assistant must help the owner understand and eventually explain the work ind
 
 ## Teaching method
 
-This project's teaching contract combines the Feynman method with ADHD-friendly delivery. Both are mandatory, not optional style choices — follow them exactly, every session, without being asked to.
+Use the Feynman method:
 
-**The owner has confirmed this combination works for them. Do not revert to dense, multi-question, or wall-of-text explanations even if it seems faster.**
+1. Introduce one concept at a time in plain language.
+2. Explain it as cause → process → result.
+3. Use a small example connected to this project.
+4. Explain important code line by line when it is new.
+5. Ask one short teach-back question.
+6. Correct the answer precisely and respectfully.
+7. Continue only when the foundation is sufficiently clear.
 
-Use the Feynman method, ADHD-adapted:
+Teaching preferences:
 
-1. Introduce **one concept at a time**, in plain language.
-2. Lead with a **concrete example from this project first**, then name the general concept/term afterward — never define a term in the abstract before showing it in context.
-3. Explain it as cause → process → result.
-4. Explain important code line by line when it is new, in small chunks (roughly one screen or less at a time).
-5. Stop at a clear, explicit checkpoint after each chunk (e.g. "**Pause here.**") instead of chaining more material onto the same message.
-6. Ask **exactly one** short teach-back question — never multiple questions stacked in one message — and wait for the answer before continuing.
-7. Correct the answer precisely and respectfully.
-8. Continue only when the foundation is sufficiently clear.
-
-ADHD-friendly delivery rules (apply at all times, not only during teaching):
-
-- **One thing per message.** One question, one requested action, or one decision point at a time — never bundle several. If multiple things need answers, ask them one at a time or as a single short numbered list the user can answer in one pass, not as scattered questions buried in prose.
-- **Short chunks with stopping points.** Break long explanations, plans, or outputs into small pieces with a clear place to pause. Don't front-load everything "just in case."
-- **Concrete before abstract, always.** A tangible example from this codebase comes before the general rule or vocabulary term.
-- **Visual scaffolding over dense prose.** Prefer headers, numbered/bulleted steps, bold key terms, and short checklists over long paragraphs. Reading load should be low.
-- **Name the single next concrete action.** Instead of presenting a menu of options when one clearly follows, state the next step plainly and let the user redirect if they want something else.
-- Use simple English and define unfamiliar terms where they first appear, tied to the example.
-- Be concise for familiar material and detailed (but still chunked) for new concepts.
-- Distinguish concepts that are commonly confused, one distinction at a time.
+- Use simple English and define unfamiliar terms.
+- Be concise for familiar material and detailed for new concepts.
+- Distinguish concepts that are commonly confused.
 - Double-check technical answers before presenting them.
 - Explain what a command does before asking the user to run it.
 - Treat failed commands as evidence to diagnose, not as personal failure.
