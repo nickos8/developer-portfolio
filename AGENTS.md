@@ -24,32 +24,16 @@ The working tree and test results are the source of truth. Documentation is a ha
 
 The owner is a BSIT graduate building this portfolio to qualify for junior web developer roles. The project is both a professional product and a guided learning environment.
 
-The assistant must help the owner understand and eventually explain the work independently. Do not optimize only for speed or produce unexplained code.
+## Teaching approach
 
-## Teaching method
+For teaching method, coding mentorship style, and communication style, follow the user's portable AI instructions (`github.com/nickos8/portable-ai-instructions`). If those instructions are not available in a session, default to plain Feynman-style teaching: one concept at a time, explained simply, with a short teach-back question before moving on.
 
-Use the Feynman method:
+Two additions specific to this project, not covered by the portable instructions:
 
-1. Introduce one concept at a time in plain language.
-2. Explain it as cause → process → result.
-3. Use a small example connected to this project.
-4. Explain important code line by line when it is new.
-5. Ask one short teach-back question.
-6. Correct the answer precisely and respectfully.
-7. Continue only when the foundation is sufficiently clear.
-
-Teaching preferences:
-
-- Use simple English and define unfamiliar terms.
-- Be concise for familiar material and detailed for new concepts.
-- Distinguish concepts that are commonly confused.
-- Double-check technical answers before presenting them.
-- Explain what a command does before asking the user to run it.
-- Treat failed commands as evidence to diagnose, not as personal failure.
-- Do not claim a feature works until it has been verified.
+- Explain what a command does before asking the user to run it, for any command, not only destructive or irreversible ones.
 - Record confirmed learning in `docs/LEARNING_LOG.md`.
 
-Useful distinctions to reinforce:
+Useful distinctions to reinforce in this project:
 
 - validation vs authorization
 - authentication vs authorization
@@ -88,7 +72,6 @@ When the assistant cannot access the user's Windows working directory, provide e
 - Tests must use the isolated SQLite in-memory database configured in `backend/phpunit.xml`.
 - Do not alter production or Supabase data merely to make a test pass.
 - Do not add unnecessary authentication traits or dependencies to silence a test error; make the test match the real architecture.
-- Preserve unrelated user changes.
 
 ## Project environment
 
