@@ -4,13 +4,13 @@
 >
 > Future assistant: read `AGENTS.md` and every document it references before changing the project. Inspect the working tree and tests because GitHub cannot contain uncommitted local work. Never document secrets.
 
-**Last updated:** 2026-09-01  
+**Last updated:** 2026-09-11  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
-**Latest verified code commit:** `a26b3e5` — **Add admin authentication and protected project creation**  
-**Current phase:** Authenticated Projects CRUD; create operation and session authentication complete  
-**Next exact feature:** Design and implement the authenticated project-management interface in React, beginning with a project creation form that displays Laravel validation errors  
-**Working tree at checkpoint:** Local `main` clean and synchronized with `origin/main`
+**Latest verified code commit:** `be8f6c7` — **Add authenticated project creation form to React SPA** (on branch `claude/busy-pasteur-amp6dc`, not yet merged to `main`)  
+**Current phase:** Authenticated Projects CRUD; create operation, session authentication, and the React creation form are complete  
+**Next exact feature:** Implement the `show`, `update`, and `destroy` actions on `ProjectController` (single-project read, validated update, delete), then extend the React interface to list, edit, and delete projects  
+**Working tree at checkpoint:** Clean on `claude/busy-pasteur-amp6dc`, one commit ahead of `main`, not yet pushed/merged
 
 ## 1. Purpose
 
@@ -125,6 +125,18 @@ Plain PHP and Composer may use XAMPP PHP 8.2, which is incompatible with Laravel
 - Added authentication and project API feature tests
 - Verified backend and frontend checks
 - Published to `origin/main`
+
+### React project creation form
+
+- `be8f6c7` — Add authenticated project creation form to React SPA
+- Added controlled inputs for every `StoreProjectRequest` field: title, short description, description, technology stack, GitHub URL, live URL, featured, published, display order
+- Technology stack is entered as a comma-separated string and split into an array before submission
+- Submits through the shared Axios client to `POST /api/projects`
+- Displays Laravel `422` field validation errors inline under each field
+- Shows a success message and resets the form after a successful creation
+- Verified `npm run lint` (0 errors) and `npm run build` (production bundle succeeded)
+- Backend suite re-run as a regression check: 10 passed, 34 assertions (no backend files changed)
+- Not yet merged to `main`; committed on `claude/busy-pasteur-amp6dc`
 
 ## 4. Projects table
 
@@ -301,20 +313,25 @@ This prevents a refresh from losing the authenticated interface while the Larave
 
 The React interface posts to `/logout`, clears its local user state, and returns to the login form. Refreshing after logout remains logged out.
 
-### Next frontend work
+### Project creation form
 
-The current `App.jsx` is an authentication proof-of-flow, not the final portfolio design.
+`App.jsx` now renders a project creation form inside the authenticated section, alongside the existing login/logout proof-of-flow. It is not yet the final portfolio design.
 
-Next:
+Implemented:
 
 1. authenticated project creation form
 2. controlled inputs for every validated field
-3. dynamic technology list or a clear initial input strategy
+3. comma-separated technology stack input, split into an array on submit
 4. submit through the shared API client
-5. display Laravel `422` field errors
-6. show successful creation response
-7. refetch or update the project list
-8. separate components as the interface grows
+5. display Laravel `422` field errors, per field
+6. show successful creation response and reset the form
+
+### Next frontend work
+
+1. fetch and display the created project list (no read/list-after-create yet; `GET /api/projects` only returns published projects)
+2. add edit and delete actions once `update`/`destroy` exist on the backend
+3. separate components as the interface grows (the project form and login form still live in one `App.jsx`)
+4. replace the raw comma-separated tech-stack input with a clearer multi-item control
 
 ## 8. Verification evidence
 
@@ -404,7 +421,7 @@ Vite production build completed successfully.
 | Credentialed CORS | Complete |
 | Authentication tests | Complete |
 | Project creation tests | Complete |
-| React project creation form | Next |
+| React project creation form | Complete (frontend only; not yet merged to `main`) |
 | Public portfolio design | Not started |
 | Project show endpoint | Not started |
 | Project update endpoint | Not started |
@@ -440,13 +457,14 @@ npm run lint
 npm run build
 ```
 
-5. Begin the React project-creation form by first inspecting:
-   - `frontend/src/App.jsx`
-   - `frontend/src/api.js`
-   - `backend/app/Http/Requests/StoreProjectRequest.php`
+5. Begin the `show`, `update`, and `destroy` `ProjectController` actions by first inspecting:
+   - `backend/app/Http/Controllers/ProjectController.php`
    - `backend/routes/api.php`
+   - `backend/app/Http/Requests/StoreProjectRequest.php` (as a pattern for an `UpdateProjectRequest`)
+   - `backend/tests/Feature/ProjectApiTest.php`
+   - `frontend/src/App.jsx` (current project creation form, to extend with list/edit/delete)
 
-6. Teach controlled form state and backend validation-error mapping before implementing the complete form.
+6. Teach route-model binding, update-specific validation, and REST status codes for read/update/delete (`200`, `404`, `204`) before implementing each action.
 
 ## 11. Roadmap
 
@@ -456,7 +474,7 @@ npm run build
 - [x] Validated create
 - [x] Protected create route
 - [x] Backend create tests
-- [ ] React create interface
+- [x] React create interface
 - [ ] Single-project read
 - [ ] Validated update
 - [ ] Delete

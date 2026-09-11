@@ -216,13 +216,48 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 - CRLF/LF messages on Windows are line-ending warnings, not automatically code failures.
 - local Git history and the GitHub remote are different; uncommitted local work cannot be recovered from GitHub.
 
+## React project creation form
+
+### Controlled inputs for a whole form
+
+Each form field has matching state (`projectForm.title`, `projectForm.tech_stack`, and so on) plus one `onChange` handler that copies the current form object and overwrites only the changed key:
+
+```js
+setProjectForm((currentForm) => ({
+  ...currentForm,
+  [name]: value,
+}))
+```
+
+`event.target.name` supplies the key, so one handler serves every text/textarea/number input instead of writing one handler per field. Checkboxes use `event.target.checked` instead of `event.target.value`, which is why `is_featured` and `is_published` need a second handler.
+
+### Shaping the payload before it leaves the browser
+
+The backend's `tech_stack` rule expects an array (`'tech_stack' => ['required', 'array', 'min:1']`), but a plain text input can only hold a string. The form collects it as a comma-separated string for a simple typing experience, then converts it immediately before the request:
+
+```js
+tech_stack: projectForm.tech_stack
+  .split(',')
+  .map((item) => item.trim())
+  .filter((item) => item !== ''),
+```
+
+This is a client-side convenience only; the backend's validation is still the authority on what counts as an acceptable list.
+
+### Mapping Laravel 422 errors to fields
+
+Laravel's validation failure response has the shape `{ message, errors: { field: [messages] } }`. Catching the Axios error and checking `error.response?.status === 422` lets the component store `error.response.data.errors` directly and render `projectErrors.title[0]` beside the matching field, instead of a single generic error message.
+
+### `htmlFor` must match the input's `id`, not its `name`
+
+A `<label htmlFor="x">` only associates with `<input id="x">` — matching it to the input's `name` attribute instead is a silent accessibility bug (clicking the label does nothing, screen readers cannot announce the field). Every field in this form uses one consistent `project-<field>` value for both `id` and `htmlFor`.
+
 ## Concepts to reinforce next
 
 - authorization policies and roles if more than one user type is introduced
 - project show, update, and delete endpoints
 - route-model binding
 - update-specific validation
-- React form state and displaying backend validation errors
 - API resource classes
 - image upload and storage
 - CI/CD

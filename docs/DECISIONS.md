@@ -108,6 +108,16 @@
 
 **Future improvement:** If multiple authenticated user roles are introduced, replace this check with a policy or explicit administrator permission.
 
+## Project creation form
+
+### Comma-separated text input for technology stack
+
+**Decision:** Collect `tech_stack` as one comma-separated text field in the React form and split it into an array immediately before the API request.
+
+**Reason:** The backend requires an array (`'tech_stack' => ['required', 'array', 'min:1']`). A single text input is the simplest control to build first; it keeps the form's first version small while still producing a correctly shaped payload.
+
+**Revisit when:** The form needs per-item editing, reordering, or duplicate prevention — replace with a dynamic list of individual inputs (add/remove a technology at a time).
+
 ## Frontend HTTP layer
 
 ### Shared Axios instance
