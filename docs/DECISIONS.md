@@ -54,6 +54,24 @@
 
 **Reason:** Visitors need published project data without authentication, while project modification must be restricted to the administrator.
 
+### Single-project `show` is protected, not public
+
+**Decision:** `GET /api/projects/{project}` requires `auth:sanctum`, unlike the public `index` listing.
+
+**Reason:** Nothing in the app has a public single-project detail page yet, and the admin needs to fetch any project by ID, including unpublished ones, to prefill an edit form. A public `show` would inherit `index`'s published-only restriction and make editing unpublished projects impossible. If a public project detail page is built later, it should be a separate, deliberately public endpoint or a published-only guard added to this one, not an assumption that this endpoint already covers that case.
+
+### Update is a full replace (`PUT`), and never touches the slug
+
+**Decision:** `PUT /api/projects/{project}` requires every field on every request (mirrors `StoreProjectRequest`'s rules exactly), and `UpdateProjectRequest` never validates a `slug` field, so an update can never change it.
+
+**Reason:** `PUT` matches how the existing React form already builds its payload (the complete object, every time), so no frontend rework was needed to support it. Keeping the slug stable once created protects any existing link to a project from breaking just because its title was edited later, the same behavior most CMS and blog platforms already have.
+
+### Hard delete, not soft delete
+
+**Decision:** `DELETE /api/projects/{project}` permanently removes the row. The `Project` model does not use the `SoftDeletes` trait, and the `projects` table has no `deleted_at` column.
+
+**Reason:** Soft deletes require an actual schema migration to add `deleted_at`, a bigger change than this endpoint needs at the portfolio's current, single-admin scale. Recoverable ("undo") deletes can be added later as its own deliberate migration if that need actually appears.
+
 ## Authentication and browser security
 
 ### Sanctum stateful SPA sessions

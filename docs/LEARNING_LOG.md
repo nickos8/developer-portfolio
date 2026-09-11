@@ -92,6 +92,28 @@ portfolio-system-3
 
 `201` communicates that a new resource was created; `200` is a general successful response.
 
+## Backend CRUD completion: show, update, destroy
+
+### Route-model binding
+
+Instead of `show(string $id)` with a manual `Project::findOrFail($id)` lookup, the parameter is type-hinted directly as the model: `show(Project $project)`. Laravel matches the route's `{project}` segment against the model's primary key by itself, injects the actual `Project` instance, and returns a `404` automatically if no row matches, without a single line of lookup code written by hand. The same pattern is reused in `update` and `destroy`.
+
+### Why `show` is protected, unlike `index`
+
+`index` is intentionally public and filters to `is_published = true`, since it's meant for a future public portfolio page. `show` is intentionally protected (`auth:sanctum`), because the admin needs to fetch *any* project by ID, including unpublished ones, to prefill an edit form. A public `show` would have inherited the published-only restriction and made editing unpublished projects impossible. Two endpoints reading similar data can have different access rules because they serve different purposes.
+
+### `PUT` (full replace) vs `PATCH` (partial update)
+
+`update` uses `PUT`: every request must resend every field, the same shape as `store`. `PATCH` would allow sending only the one or two fields that changed, but needs looser validation rules (fields optional instead of required) and doesn't match how the current React form already works (it always builds and sends the complete payload). `PUT` was chosen because it fits what already exists, not because it's inherently better than `PATCH`.
+
+### Keeping the slug stable on update
+
+`UpdateProjectRequest`'s validation rules never include a `slug` field. That means `$request->validated()` can never contain a `slug` key, so `$project->update($validated)` has no `slug` value to write, the column is left exactly as it was. This is a deliberate design decision, not an oversight: if editing a project's title also regenerated its slug, its URL would change every time the title changed, breaking any bookmarked or shared link. Most real CMS and blog platforms keep a resource's URL stable once published, even after later edits.
+
+### Hard delete vs soft delete
+
+`destroy` performs a real, permanent delete (`$project->delete()` with no `SoftDeletes` trait on the model). Laravel's soft-delete feature keeps the row in the database with a `deleted_at` timestamp instead, hiding it from normal queries and allowing it to be restored later, but that requires an actual migration to add the `deleted_at` column, a genuine schema change, not just a controller change. Hard delete was chosen deliberately, matching the table as it exists today, since the portfolio is small enough that "undo delete" isn't a real need yet. This can be upgraded to soft deletes later as its own deliberate change if that need appears.
+
 ## Authentication and browser security
 
 ### Authentication vs authorization
@@ -325,12 +347,9 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 ## Concepts to reinforce next
 
 - authorization policies and roles if more than one user type is introduced
-- project show, update, and delete endpoints
-- route-model binding
-- update-specific validation
-- backend `show`, `update`, `destroy` endpoints with feature tests
+- React edit and delete UI, wiring `PUT`/`DELETE /api/projects/{project}` into the existing project list
 - splitting `App.jsx` into separate components as the interface grows
-- an admin-specific listing that includes unpublished projects (current list reuses the public, published-only endpoint)
+- an admin-specific listing that includes unpublished projects in the list view (`show` can now fetch one by ID regardless of status, but `index` still filters to published only)
 - API resource classes
 - image upload and storage
 - CI/CD

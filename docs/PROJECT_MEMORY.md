@@ -4,13 +4,13 @@
 >
 > Future assistant: read `AGENTS.md` and every document it references before changing the project. Inspect the working tree and tests because GitHub cannot contain uncommitted local work. Never document secrets.
 
-**Last updated:** 2026-09-10  
+**Last updated:** 2026-09-11  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
-**Latest verified code commit on `main`:** `a26b3e5` — **Add admin authentication and protected project creation**  
-**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `e3860be` — **Fetch and display the project list after login and after create**  
-**Current phase:** Authenticated Projects CRUD; the project-creation form is functionally complete (API wiring, generic and per-field `422` errors, reset and confirm on success) and the admin view now also fetches and displays the published project list, refetching automatically right after a successful create. Manually verified end to end in the browser, including that a newly created published project appears immediately without a page refresh.  
-**Next exact feature:** Backend CRUD completion (`show`, `update`, `destroy` on `ProjectController`, each with feature tests) is now the natural next step, since the React side of "create and see your projects" is done. See Section 11 roadmap.  
+**Latest verified code commit on `main`:** `a26b3e5`, **Add admin authentication and protected project creation**  
+**Latest verified code commit on `claude/portfolio-project-review-absmbr` (unmerged):** `2fe369a`, **Add protected project delete endpoint**  
+**Current phase:** Backend Projects CRUD is now complete: `index` (public, published only), `store`, `show`, `update`, `destroy` (all protected, `auth:sanctum`), all with feature tests. The React side handles create, list, and per-field errors. React does not yet have edit or delete UI, only the backend endpoints exist so far.  
+**Next exact feature:** Build the React edit and delete UI (buttons on each project in the list, wired to `PUT`/`DELETE /api/projects/{project}`), or split `App.jsx` into separate components first, since it now holds auth, the create form, and the project list in one file. See Section 11 roadmap.  
 **Working tree at checkpoint:** `claude/portfolio-project-review-absmbr` clean and synchronized with `origin/claude/portfolio-project-review-absmbr`; not yet merged to `main`
 
 ## 1. Purpose
@@ -196,9 +196,9 @@ next duplicate → portfolio-system-3
 
 ### Remaining project controller actions
 
-- `show`: not implemented
-- `update`: not implemented
-- `destroy`: not implemented
+- `show`: implemented, protected (`auth:sanctum`), returns any project regardless of published status, 404 via route-model binding if not found
+- `update`: implemented, protected, full replace (`PUT`, not `PATCH`), slug is never touched so a title edit cannot change the URL
+- `destroy`: implemented, protected, hard delete (no `deleted_at` column exists), returns `204 No Content`
 - image upload: not implemented
 
 ## 6. Authentication architecture
@@ -334,21 +334,28 @@ All manually verified in the browser on this checkpoint:
 - `2c67a2d` — renders `projectErrors[field][0]` beneath every validated input (`title`, `short_description`, `description`, `tech_stack`, `github_url`, `live_url`, `is_featured`, `is_published`, `display_order`). Manually verified: submitting with an empty title now shows "The title field is required." directly under that field, in addition to the existing "Please fix the errors below." banner. `npm run lint` is fully clean (0 warnings) now that `projectErrors` is actually read.
 - `e3860be` — added `projects`, `isLoadingProjects`, `projectsError` state and a `fetchProjects()` function that calls `GET /api/projects` (the existing public, `is_published`-only endpoint). Two triggers call it: a `useEffect` with dependency `[user]` (fires once when login succeeds) and a direct call at the end of `handleProjectSubmit`'s success branch (fires after every successful create, since creating a project does not change `user` and so cannot rely on the effect alone). Renders the result as a "Published Projects" list with a loading state, an error state, and an empty state. Manually verified: existing published projects appear after login; a newly created project with `is_published` checked appears immediately with no page refresh; a project created with `is_published` unchecked saves successfully but correctly does not appear in this list (expected, since `ProjectController@index` filters to published only — this is a known, accepted limitation of reusing the public endpoint for the admin view, not a bug).
 
-The project-creation and project-viewing flow is now functionally complete against items 1–7 in "Next frontend work" above.
+The project-creation and project-viewing flow is now functionally complete against items 1-7 in "Next frontend work" above.
 
-Still missing before this branch satisfies all of items 1–8:
+- `b717f9d`, added `ProjectController@show`, protected (`auth:sanctum`), route-model binding (`Project $project`), 404 automatically if not found. Deliberately protected, not public, since the admin needs to fetch any project including unpublished ones, unlike the public `index`. 4 feature tests: guest rejected, authenticated view works, authenticated view of an unpublished project works (proves the design intent), nonexistent project returns 404.
+- `d621b1d`, added `UpdateProjectRequest` (same rules as `StoreProjectRequest`) and `ProjectController@update`, full replace (`PUT`, not `PATCH`), route-model binding. The slug is never included in `$request->validated()`, so `$project->update($validated)` cannot touch it, a title edit never changes the project's URL. 5 feature tests, including one that specifically proves the slug stays the same after a title change.
+- `2fe369a`, added `ProjectController@destroy`, hard delete (no `deleted_at` column exists, soft delete would need a new migration and was deliberately deferred), returns `204 No Content` matching the existing `logout` endpoint's response style. 4 feature tests: guest rejected, delete actually removes the row, deleting one project leaves others untouched, nonexistent project returns 404.
 
-- separate components as the interface grows (not started) — `App.jsx` holds auth, the entire project form, and the project list in one file
-- an admin-specific listing that also shows unpublished projects (not started, not in the original 1–8 list either, but a real gap now that the admin list only shows what a public visitor would see) — would need a new protected endpoint, since `GET /api/projects` is intentionally public and published-only
+Backend Projects CRUD (`index`, `store`, `show`, `update`, `destroy`) is now complete and fully tested (17 tests, 52 assertions in `ProjectApiTest`).
+
+Still missing before this branch satisfies all of items 1-8 in "Next frontend work":
+
+- React UI for edit and delete (not started), the backend endpoints exist but nothing in `App.jsx` calls `PUT` or `DELETE` yet
+- separate components as the interface grows (not started), `App.jsx` holds auth, the create form, and the project list in one file
+- an admin-specific listing that also shows unpublished projects in the list view (still a gap, `show` can now fetch an unpublished project by ID, but `index` still filters to published only, so the list itself still hides them)
 
 ### Exact next action to resume
 
 1. Read `AGENTS.md` and this file's Section 10 resume procedure.
-2. Implement the backend `show`, `update`, `destroy` actions on `ProjectController`, each with feature tests (guest rejected, authenticated session allowed, not-found handling, validation on update).
-3. Optionally revisit whether the admin view should see unpublished projects too (a protected listing endpoint), likely alongside the `update`/`destroy` UI work.
-4. Consider merging this branch to `main` once backend CRUD reaches its own verified checkpoint — the full create-and-view flow is already complete and stable.
+2. Build the React edit and delete UI: an Edit and Delete action per project in the "Published Projects" list, wired to `PUT`/`DELETE /api/projects/{project}`.
+3. Consider whether to tackle the `App.jsx` component-splitting first, since adding edit/delete UI grows the file further.
+4. Consider merging this branch to `main` once the React CRUD UI reaches its own verified checkpoint, the backend is already complete and stable.
 
-Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, why a number input's `.value` is still a string, the label/id accessibility contract, and the two-trigger `useEffect`-plus-manual-call fetch pattern) is recorded in `docs/LEARNING_LOG.md`.
+Corresponding confirmed learning (the `[name]` computed-key pattern, the checkbox `.checked` vs `.value` distinction, why a number input's `.value` is still a string, the label/id accessibility contract, the two-trigger `useEffect`-plus-manual-call fetch pattern, route-model binding, and the slug-stability design decision) is recorded in `docs/LEARNING_LOG.md`.
 
 ## 8. Verification evidence
 
@@ -390,6 +397,8 @@ Project API tests:
 - invalid data is rejected
 
 The project tests use `$this->actingAs($user)` because the real application uses session authentication. The earlier `Sanctum::actingAs` attempt failed with missing `withAccessToken()` because it simulated token authentication.
+
+**On `claude/portfolio-project-review-absmbr` (unmerged), `ProjectApiTest` alone is now at 17 tests, 52 assertions**, covering the full CRUD set: create, duplicate slug, validation, view (including an unpublished project by ID), update (including the slug-stability proof), and delete (including that deleting one project leaves others untouched). Verified with `./vendor/bin/phpunit --filter=ProjectApiTest` directly, not `php artisan test`, since this remote sandbox has no `backend/.env` and `php artisan test`'s full bootstrap needs one; `phpunit.xml`'s own env values are sufficient for the tests themselves. The full suite here also shows 4 pre-existing failures in `AuthenticationTest` and `ExampleTest` (`MissingAppKeyException`, no `APP_KEY` in this sandbox), unrelated to any of this branch's changes and not expected on a machine with a real `.env`.
 
 `backend/phpunit.xml` uses:
 
@@ -438,11 +447,11 @@ Vite production build completed successfully.
 | Credentialed CORS | Complete |
 | Authentication tests | Complete |
 | Project creation tests | Complete |
-| React project creation form | Complete (create + list; edit/delete not started) |
+| React project creation form | Complete (create + list; edit/delete UI not started) |
 | Public portfolio design | Not started |
-| Project show endpoint | Not started |
-| Project update endpoint | Not started |
-| Project delete endpoint | Not started |
+| Project show endpoint | Complete (backend only) |
+| Project update endpoint | Complete (backend only) |
+| Project delete endpoint | Complete (backend only) |
 | Image handling | Not started |
 | Deployment | Planned |
 
@@ -491,10 +500,10 @@ npm run build
 - [x] Protected create route
 - [x] Backend create tests
 - [x] React create interface (create + list; components not yet split up)
-- [ ] Single-project read
-- [ ] Validated update
-- [ ] Delete
-- [ ] CRUD test coverage
+- [x] Single-project read
+- [x] Validated update
+- [x] Delete
+- [x] CRUD test coverage (backend feature tests only, React UI for edit/delete not started)
 - [ ] Image upload
 
 ### Public portfolio
