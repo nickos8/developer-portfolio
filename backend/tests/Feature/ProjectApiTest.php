@@ -162,6 +162,127 @@ class ProjectApiTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_guest_cannot_update_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->putJson(
+            "/api/projects/{$project->id}",
+            $this->validProjectData(),
+        );
+
+        $response->assertUnauthorized();
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'title' => 'Portfolio System',
+        ]);
+    }
+
+    public function test_authenticated_user_can_update_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            ...$this->validProjectData(),
+            'title' => 'Updated Portfolio System',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('title', 'Updated Portfolio System');
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'title' => 'Updated Portfolio System',
+        ]);
+    }
+
+    public function test_updating_title_does_not_change_slug(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            ...$this->validProjectData(),
+            'title' => 'A Completely Different Title',
+        ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'title' => 'A Completely Different Title',
+            'slug' => 'portfolio-system',
+        ]);
+    }
+
+    public function test_invalid_update_data_is_rejected(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            'title' => '',
+            'short_description' => '',
+            'description' => '',
+            'tech_stack' => [],
+            'github_url' => 'not-a-valid-url',
+            'is_published' => 'not-a-boolean',
+            'display_order' => -1,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'title',
+                'short_description',
+                'description',
+                'tech_stack',
+                'github_url',
+                'is_published',
+                'display_order',
+            ]);
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'title' => 'Portfolio System',
+        ]);
+    }
+
+    public function test_updating_nonexistent_project_returns_not_found(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->putJson('/api/projects/999', $this->validProjectData());
+
+        $response->assertNotFound();
+    }
+
     private function validProjectData(): array
     {
         return [
