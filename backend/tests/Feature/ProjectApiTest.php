@@ -283,6 +283,72 @@ class ProjectApiTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_guest_cannot_delete_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->deleteJson("/api/projects/{$project->id}");
+
+        $response->assertUnauthorized();
+
+        $this->assertDatabaseHas('projects', ['id' => $project->id]);
+    }
+
+    public function test_authenticated_user_can_delete_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson("/api/projects/{$project->id}");
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+    }
+
+    public function test_deleting_one_project_does_not_affect_others(): void
+    {
+        $projectToDelete = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $projectToKeep = Project::create([
+            ...$this->validProjectData(),
+            'title' => 'Another Project',
+            'slug' => 'another-project',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $this->deleteJson("/api/projects/{$projectToDelete->id}");
+
+        $this->assertDatabaseMissing('projects', ['id' => $projectToDelete->id]);
+        $this->assertDatabaseHas('projects', ['id' => $projectToKeep->id]);
+    }
+
+    public function test_deleting_nonexistent_project_returns_not_found(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->deleteJson('/api/projects/999');
+
+        $response->assertNotFound();
+    }
+
     private function validProjectData(): array
     {
         return [

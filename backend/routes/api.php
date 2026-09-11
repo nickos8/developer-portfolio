@@ -17,3 +17,6 @@ Route::get('/projects/{project}', [ProjectController::class, 'show'])
 
 Route::put('/projects/{project}', [ProjectController::class, 'update'])
     ->middleware('auth:sanctum');
+
+Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])
+    ->middleware('auth:sanctum');
