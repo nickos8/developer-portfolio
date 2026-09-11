@@ -103,6 +103,65 @@ class ProjectApiTest extends TestCase
         $this->assertDatabaseCount('projects', 0);
     }
 
+    public function test_guest_cannot_view_single_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_authenticated_user_can_view_single_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('id', $project->id)
+            ->assertJsonPath('title', 'Portfolio System');
+    }
+
+    public function test_authenticated_user_can_view_unpublished_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'unpublished-project',
+            'is_published' => false,
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response->assertOk();
+    }
+
+    public function test_viewing_nonexistent_project_returns_not_found(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->getJson('/api/projects/999');
+
+        $response->assertNotFound();
+    }
+
     private function validProjectData(): array
     {
         return [

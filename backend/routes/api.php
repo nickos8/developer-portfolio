@@ -11,3 +11,6 @@ Route::get('/user', [AuthController::class, 'user'])
 
 Route::post('/projects', [ProjectController::class, 'store'])
     ->middleware('auth:sanctum');
+
+Route::get('/projects/{project}', [ProjectController::class, 'show'])
+    ->middleware('auth:sanctum');
