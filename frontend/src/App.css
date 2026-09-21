@@ -260,6 +260,16 @@ section {
   background: var(--surface-2);
 }
 
+.card p {
+  color: var(--muted);
+  font-size: 14.5px;
+  margin: 0 0 10px;
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
 .proj-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -479,6 +489,13 @@ footer {
 .admin-header h2 {
   font-size: clamp(1.4rem, 3.6vw, 1.9rem);
   font-weight: 800;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
 .admin-grid {

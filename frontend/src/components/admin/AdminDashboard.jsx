@@ -1,53 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import api from '../../api'
-import ProjectForm from './ProjectForm'
+import ProjectsPanel from './ProjectsPanel'
+import ProfilePanel from './ProfilePanel'
+import SkillsPanel from './SkillsPanel'
 
-async function fetchProjects() {
-  const response = await api.get('/api/admin/projects')
-  return response.data
-}
+const TABS = [
+  { id: 'projects', label: 'Projects' },
+  { id: 'profile', label: 'Profile' },
+  { id: 'skills', label: 'Skills' },
+]
 
 export default function AdminDashboard({ user, onLogout }) {
-  const [projects, setProjects] = useState([])
-  const [status, setStatus] = useState('loading')
-  const [editingProject, setEditingProject] = useState(null)
+  const [tab, setTab] = useState('projects')
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-
-  useEffect(() => {
-    async function loadOnMount() {
-      try {
-        setProjects(await fetchProjects())
-        setStatus('ready')
-      } catch {
-        setStatus('error')
-      }
-    }
-
-    loadOnMount()
-  }, [])
-
-  async function loadProjects() {
-    try {
-      setProjects(await fetchProjects())
-      setStatus('ready')
-    } catch {
-      setStatus('error')
-    }
-  }
-
-  async function handleDelete(project) {
-    if (!window.confirm(`Delete "${project.title}"? This cannot be undone.`)) {
-      return
-    }
-
-    await api.delete(`/api/projects/${project.id}`)
-
-    if (editingProject?.id === project.id) {
-      setEditingProject(null)
-    }
-
-    loadProjects()
-  }
 
   async function handleLogout() {
     setIsLoggingOut(true)
@@ -74,49 +39,22 @@ export default function AdminDashboard({ user, onLogout }) {
           </button>
         </div>
 
-        <div className="admin-grid">
-          <div className="admin-list">
-            {status === 'loading' && <p className="state-msg">Loading projects...</p>}
-            {status === 'error' && <p className="state-msg">Could not load projects.</p>}
-            {status === 'ready' && projects.length === 0 && (
-              <p className="empty-state">No projects yet. Create the first one.</p>
-            )}
-
-            {status === 'ready' &&
-              projects.map((project) => (
-                <div className="card admin-project-row" key={project.id}>
-                  <div className="meta">
-                    <h4>{project.title}</h4>
-                    <div className="badges">
-                      <span className={`status-pill${project.is_published ? ' on' : ''}`}>
-                        {project.is_published ? 'Published' : 'Draft'}
-                      </span>
-                      {project.is_featured && <span className="status-pill on">Featured</span>}
-                    </div>
-                  </div>
-
-                  <div className="admin-actions">
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditingProject(project)}>
-                      Edit
-                    </button>
-                    <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDelete(project)}>
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-
-          <ProjectForm
-            key={editingProject?.id ?? 'new'}
-            editingProject={editingProject}
-            onSaved={() => {
-              loadProjects()
-              setEditingProject(null)
-            }}
-            onCancelEdit={() => setEditingProject(null)}
-          />
+        <div className="admin-tabs">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`btn btn-sm ${tab === item.id ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setTab(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
+
+        {tab === 'projects' && <ProjectsPanel />}
+        {tab === 'profile' && <ProfilePanel />}
+        {tab === 'skills' && <SkillsPanel />}
       </div>
     </section>
   )

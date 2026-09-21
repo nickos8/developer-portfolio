@@ -7,8 +7,8 @@
 **Last updated:** 2026-09-21  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
-**Latest verified code commit:** pending — see "Current phase" below (branch `claude/tender-pascal-wf0hzb`)  
-**Current phase:** Full Projects CRUD complete on both backend and frontend; public portfolio page and authenticated admin dashboard implemented and styled to match the `nickos8/portfolio` design system  
+**Latest verified code commit:** pending — see "Current phase" below (branch `claude/tender-pascal-wf0hzb`, open as pull request #2)  
+**Current phase:** Full Projects CRUD, a singleton Profile (name/role/bio), and a Skills CRUD are all complete on both backend and frontend; public portfolio page and authenticated admin dashboard (tabbed: Projects / Profile / Skills) implemented and styled to match the `nickos8/portfolio` design system  
 **Next exact feature:** Image upload for `image_path`, then deployment planning (see section 11)  
 **Working tree at checkpoint:** All listed changes below verified and ready to commit
 
@@ -210,6 +210,21 @@ DELETE /api/projects/{project}  auth:sanctum, deletes the project
 
 - image upload: not implemented — `image_path` remains a plain string column
 
+### Profile (singleton) and Skills
+
+```text
+GET  /api/profile             public; {"profile": null} until the admin saves one for the first time
+PUT  /api/profile              auth:sanctum; creates the row on first save, updates it after
+GET  /api/skills                public; every skill, ordered by display_order then name
+POST /api/skills                auth:sanctum, validated create
+PUT  /api/skills/{skill}        auth:sanctum, validated update
+DELETE /api/skills/{skill}      auth:sanctum, deletes the skill
+```
+
+`profiles` is a deliberate one-row table: there is exactly one administrator and one portfolio, so `ProfileController@update` does `Profile::first() ?? new Profile` instead of taking an id. `GET /api/profile` wraps the row in `{"profile": ...}` rather than returning it bare — `response()->json(Profile::first())` collapses a genuine `null` into `{}` on the wire (a Laravel/Symfony `JsonResponse` quirk, confirmed with `php artisan tinker`), which the frontend could not have told apart from "profile with no fields." Wrapping the key makes "no profile yet" (`{"profile": null}`) and "profile exists" unambiguous.
+
+`skills` has no publish flag — every skill an admin adds is immediately public. A skill is just a name and a category, so it carries none of a project's "unfinished draft" risk.
+
 ## 6. Authentication architecture
 
 This is a first-party SPA using Laravel session cookies recognized by Sanctum.
@@ -327,6 +342,19 @@ Components (`frontend/src/components/`):
 
 Visual design: `frontend/src/index.css` and `App.css` port the `nickos8/portfolio` repo's color tokens (dark theme by default, `data-theme="light"` override), the `Inter` + `JetBrains Mono` font pairing, and its card/pill/tag/button component classes, so the two repos read as one visual system. The portfolio repo's static marketing content (hero copy, timeline, skills, certificates) was not copied — this app's hero and content are about the CRUD demo itself, since the "projects" here are the live, editable data.
 
+### Admin dashboard tabs
+
+`AdminDashboard.jsx` now switches between three tabs (`Projects`, `Profile`, `Skills`) with a single `tab` state instead of one fixed layout. Each tab is its own component:
+
+- `admin/ProjectsPanel.jsx` — the project list + `ProjectForm`, unchanged in behavior from before, just extracted so `AdminDashboard` only owns tab state and logout
+- `admin/ProfilePanel.jsx` — a single form (name, role, bio) that loads the current profile on mount and `PUT`s the whole thing back; no separate create/edit mode, since there is only ever one profile
+- `admin/SkillsPanel.jsx` + `admin/SkillForm.jsx` — the same list-plus-form, key-remount pattern as projects, scaled down to a skill's three fields (name, category, display order)
+
+Public page additions:
+
+- `components/AboutSection.jsx` — fetches `GET /api/profile`; renders nothing at all (`return null`) until a profile exists, so a fresh install's homepage doesn't show an empty "About" section
+- `components/SkillsSection.jsx` — fetches `GET /api/skills`, groups them by `category` (skills with no category land under "Other"), renders each group as a card of pills; also renders nothing when the list is empty
+
 ### Known limitation on this environment
 
 This session had no network path to the Supabase Postgres instance, so the full stack could not be exercised end-to-end in a browser (`herd php artisan serve` + `npm run dev` against real data). Verification instead relied on: the full backend feature-test suite (SQLite `:memory:`, 21 tests, listed below) covering every route and permission boundary, and `npm run lint` / `npm run build` for the frontend. Do a manual browser pass — login, create, edit, publish/unpublish, delete, theme toggle — the first time this runs against the real database.
@@ -359,8 +387,8 @@ Verified:
 Latest complete result on this checkpoint:
 
 ```text
-Tests: 21 passed (58 assertions)
-Duration: 0.71s
+Tests: 35 passed (96 assertions)
+Duration: 0.95s
 ```
 
 Authentication tests:
@@ -387,6 +415,10 @@ Project API tests:
 - invalid update data is rejected
 - guest cannot delete a project
 - authenticated user can delete a project
+
+Profile API tests: guest sees `{"profile": null}` before any save, guest can view a saved profile, guest cannot update it, an authenticated user can create it (first `PUT`) and update it again (second `PUT` still leaves exactly one row), invalid data is rejected.
+
+Skill API tests: guest can list skills, guest cannot create/update/delete, an authenticated user can create/update/delete, invalid data is rejected.
 
 The project tests use `$this->actingAs($user)` because the real application uses session authentication. The earlier `Sanctum::actingAs` attempt failed with missing `withAccessToken()` because it simulated token authentication.
 
@@ -440,6 +472,8 @@ Vite production build completed successfully.
 | React project creation form | Complete |
 | React edit/delete dashboard | Complete |
 | Public portfolio design (matching `portfolio` repo) | Complete |
+| Profile (name/role/bio) CRUD | Complete |
+| Skills CRUD | Complete |
 | Project show endpoint | Complete |
 | Project update endpoint | Complete |
 | Project delete endpoint | Complete |
@@ -501,8 +535,8 @@ npm run build
 ### Public portfolio
 
 - [x] Hero (CRUD-demo framing, styled like `portfolio` repo)
-- [ ] About
-- [ ] Skills
+- [x] About (profile name/role/bio, hidden until the admin saves one)
+- [x] Skills (grouped by category, hidden until at least one exists)
 - [x] Featured projects (tagged inline on published project cards)
 - [x] All published projects
 - [ ] Contact

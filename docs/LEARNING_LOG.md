@@ -238,6 +238,16 @@ The store endpoint always builds a fresh slug. The update endpoint only rebuilds
 
 `GET /api/projects` (public) filters to `is_published = true` because visitors should only ever see finished work. `GET /api/admin/projects` (protected by `auth:sanctum`) returns every row regardless of publish state, because the administrator needs to see and edit drafts before they go live. Same table, two different queries for two different audiences — that is authorization expressed as a query filter, not just a route guard.
 
+## Singleton resources and a `null` that wasn't
+
+### Modeling "exactly one row" without a fixed id
+
+The `profiles` table has no special "there is only one" constraint — the singleton behavior lives entirely in the controller: `Profile::first() ?? new Profile` either finds the existing row or builds a fresh one, then `save()` decides insert vs. update based on whether the model already has a primary key. This is a controller-level convention, not a database-level guarantee; a second admin user or a race between two simultaneous first-saves could create a second row. Acceptable for a single-admin portfolio, same caveat as the project slug loop already documented in `docs/DECISIONS.md`.
+
+### A Laravel surprise: `response()->json(null)` is not `null` on the wire
+
+The expectation was that returning `response()->json(Profile::first())` when no profile exists yet would send the literal JSON `null`. Testing it directly (`php artisan tinker --execute="echo response()->json(null)->getContent();"`) showed it actually sends `{}`. In JavaScript, `{}` is truthy — a naive `if (profile)` check on the frontend would have treated "no profile yet" as "profile exists with no fields," which would have shown broken UI instead of hiding the About section. The fix was to never rely on a bare `null` crossing the API boundary: wrap it as `{"profile": Profile::first()}`, so the frontend checks `response.data.profile` instead of the whole response body. Lesson: verify what a framework actually serializes before depending on it, especially for the empty/absent case — it is exactly the case most likely to be wrong in a way that hides quietly until someone hits it.
+
 ## Concepts to reinforce next
 
 - authorization policies and roles if more than one user type is introduced

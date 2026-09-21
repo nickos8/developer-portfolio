@@ -198,6 +198,28 @@
 
 **Known limitation:** Full end-to-end browser verification against the real Supabase database was not possible in the session that built this — no network path to Supabase was available. Automated backend tests (SQLite) and frontend lint/build stood in for it. A manual pass is still owed before calling this feature done in `docs/PROJECT_MEMORY.md`'s stricter sense.
 
+## Profile and skills
+
+### `profiles` is a one-row table, enforced by the controller, not the schema
+
+**Decision:** No unique constraint or fixed id forces `profiles` to hold one row. `ProfileController@update` does `Profile::first() ?? new Profile` and saves it; there is currently exactly one administrator, so there is exactly one profile in practice.
+
+**Reason:** Simplest thing that works for a single-admin portfolio; adding a real singleton constraint (a fixed id, a DB-level check) would be solving a problem that doesn't exist yet.
+
+**Revisit when:** More than one admin user is introduced, or a race between two simultaneous first-saves becomes a real risk instead of a theoretical one.
+
+### `GET /api/profile` wraps the result in `{"profile": ...}`
+
+**Decision:** Return `{"profile": Profile::first()}` instead of the bare model (which would be `null` when no profile exists).
+
+**Reason:** Verified with `php artisan tinker` that `response()->json(null)` actually serializes to `{}`, not `null`, on the wire. An empty object is truthy in JavaScript, so a bare response would have made "no profile yet" indistinguishable from "profile exists with empty fields" on the frontend. Wrapping the key sidesteps the ambiguity entirely — `response.data.profile` is either an object or `null`, unambiguously.
+
+### Skills have no publish flag
+
+**Decision:** Every skill created through `POST /api/skills` is immediately visible on the public page; there is no `is_published` column on `skills`.
+
+**Reason:** A skill is a name and an optional category — there's no unfinished-draft state worth modeling, unlike a project that might have half-written copy. Adding a publish flag here would be complexity without a real use case.
+
 ## Deployment direction
 
 ### Planned combined-origin deployment

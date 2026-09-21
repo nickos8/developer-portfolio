@@ -3,6 +3,8 @@ import api from './api'
 import './App.css'
 import Header from './components/Header'
 import Hero from './components/Hero'
+import AboutSection from './components/AboutSection'
+import SkillsSection from './components/SkillsSection'
 import ProjectsSection from './components/ProjectsSection'
 import Footer from './components/Footer'
 import LoginForm from './components/admin/LoginForm'
@@ -74,6 +76,8 @@ function App() {
       ) : (
         <>
           <Hero />
+          <AboutSection />
+          <SkillsSection />
           <ProjectsSection />
         </>
       )}
