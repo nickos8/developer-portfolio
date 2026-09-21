@@ -216,14 +216,43 @@ For this stateful SPA, `$this->actingAs($user)` correctly simulates a session-au
 - CRLF/LF messages on Windows are line-ending warnings, not automatically code failures.
 - local Git history and the GitHub remote are different; uncommitted local work cannot be recovered from GitHub.
 
+## Full CRUD and dashboard concepts
+
+### Implicit route-model binding
+
+Typing a controller parameter as `Project $project` instead of `string $id` tells Laravel to look up the model by the route segment automatically. An id that matches no row 404s before the controller method body runs at all, which is why `show`, `update`, and `destroy` no longer need a manual "not found" check for a bad id.
+
+### Partial update validation with `sometimes`
+
+`StoreProjectRequest` requires every field because a new project has nothing yet. `UpdateProjectRequest` marks every field `sometimes` (validate only if present) plus `required` when it is present, so a `PUT` that only sends `is_published` doesn't fail validation for missing `title` or `description`.
+
+### Conditional slug regeneration
+
+The store endpoint always builds a fresh slug. The update endpoint only rebuilds it when the incoming `title` differs from the project's current title — otherwise editing the description would silently change the project's URL, breaking any link someone already saved.
+
+### `key` resets React state instead of an effect
+
+`ProjectForm` used to copy `editingProject` into local state inside a `useEffect`. React's own guidance is to avoid that pattern: instead, `AdminDashboard` renders `<ProjectForm key={editingProject?.id ?? 'new'} .../>`. Changing the `key` tells React to throw away the old component instance and mount a new one, so the form's `useState` initializer runs fresh with no effect needed. This also happens to be exactly what `oxlint`'s `set-state-in-effect` rule was warning about.
+
+### Admin-only listing vs public listing
+
+`GET /api/projects` (public) filters to `is_published = true` because visitors should only ever see finished work. `GET /api/admin/projects` (protected by `auth:sanctum`) returns every row regardless of publish state, because the administrator needs to see and edit drafts before they go live. Same table, two different queries for two different audiences — that is authorization expressed as a query filter, not just a route guard.
+
+## Singleton resources and a `null` that wasn't
+
+### Modeling "exactly one row" without a fixed id
+
+The `profiles` table has no special "there is only one" constraint — the singleton behavior lives entirely in the controller: `Profile::first() ?? new Profile` either finds the existing row or builds a fresh one, then `save()` decides insert vs. update based on whether the model already has a primary key. This is a controller-level convention, not a database-level guarantee; a second admin user or a race between two simultaneous first-saves could create a second row. Acceptable for a single-admin portfolio, same caveat as the project slug loop already documented in `docs/DECISIONS.md`.
+
+### A Laravel surprise: `response()->json(null)` is not `null` on the wire
+
+The expectation was that returning `response()->json(Profile::first())` when no profile exists yet would send the literal JSON `null`. Testing it directly (`php artisan tinker --execute="echo response()->json(null)->getContent();"`) showed it actually sends `{}`. In JavaScript, `{}` is truthy — a naive `if (profile)` check on the frontend would have treated "no profile yet" as "profile exists with no fields," which would have shown broken UI instead of hiding the About section. The fix was to never rely on a bare `null` crossing the API boundary: wrap it as `{"profile": Profile::first()}`, so the frontend checks `response.data.profile` instead of the whole response body. Lesson: verify what a framework actually serializes before depending on it, especially for the empty/absent case — it is exactly the case most likely to be wrong in a way that hides quietly until someone hits it.
+
 ## Concepts to reinforce next
 
 - authorization policies and roles if more than one user type is introduced
-- project show, update, and delete endpoints
-- route-model binding
-- update-specific validation
-- React form state and displaying backend validation errors
-- API resource classes
+- API resource classes (to control exactly what JSON shape leaves the API, instead of returning the raw model)
 - image upload and storage
 - CI/CD
 - production deployment and environment configuration
+- manual browser verification of the admin dashboard against real Supabase data (not yet done — see `docs/PROJECT_MEMORY.md`)
