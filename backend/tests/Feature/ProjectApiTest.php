@@ -103,6 +103,174 @@ class ProjectApiTest extends TestCase
         $this->assertDatabaseCount('projects', 0);
     }
 
+    public function test_guest_can_view_a_single_published_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('slug', 'portfolio-system');
+    }
+
+    public function test_guest_cannot_view_an_unpublished_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'is_published' => false,
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response->assertNotFound();
+    }
+
+    public function test_authenticated_user_can_view_an_unpublished_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'is_published' => false,
+            'slug' => 'portfolio-system',
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response->assertOk();
+    }
+
+    public function test_guest_cannot_see_the_admin_project_list(): void
+    {
+        $response = $this->getJson('/api/admin/projects');
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_authenticated_user_sees_every_project_in_the_admin_list(): void
+    {
+        Project::create([...$this->validProjectData(), 'slug' => 'published-one', 'is_published' => true]);
+        Project::create([...$this->validProjectData(), 'slug' => 'unpublished-one', 'is_published' => false]);
+
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->getJson('/api/admin/projects');
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json());
+    }
+
+    public function test_guest_cannot_update_a_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            'title' => 'Updated Title',
+        ]);
+
+        $response->assertUnauthorized();
+
+        $this->assertDatabaseHas('projects', ['title' => 'Portfolio System']);
+    }
+
+    public function test_authenticated_user_can_update_a_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            'title' => 'Renamed Portfolio System',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('title', 'Renamed Portfolio System')
+            ->assertJsonPath('slug', 'renamed-portfolio-system');
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'title' => 'Renamed Portfolio System',
+            'slug' => 'renamed-portfolio-system',
+        ]);
+    }
+
+    public function test_updating_a_project_without_changing_the_title_keeps_the_slug(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            'is_featured' => false,
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('slug', 'portfolio-system')
+            ->assertJsonPath('is_featured', false);
+    }
+
+    public function test_invalid_update_data_is_rejected(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->putJson("/api/projects/{$project->id}", [
+            'title' => '',
+        ]);
+
+        $response->assertUnprocessable()->assertJsonValidationErrors(['title']);
+    }
+
+    public function test_guest_cannot_delete_a_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $response = $this->deleteJson("/api/projects/{$project->id}");
+
+        $response->assertUnauthorized();
+
+        $this->assertDatabaseCount('projects', 1);
+    }
+
+    public function test_authenticated_user_can_delete_a_project(): void
+    {
+        $project = Project::create([
+            ...$this->validProjectData(),
+            'slug' => 'portfolio-system',
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->deleteJson("/api/projects/{$project->id}");
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseCount('projects', 0);
+    }
+
     private function validProjectData(): array
     {
         return [

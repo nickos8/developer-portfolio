@@ -156,6 +156,48 @@
 
 **Reason:** Git history is permanent and may later become public.
 
+## Full CRUD and admin interface
+
+### Route-model binding for show, update, destroy
+
+**Decision:** Type-hint `Project $project` on `show`, `update`, and `destroy` instead of a raw `string $id`.
+
+**Reason:** Laravel resolves the model and 404s automatically on an unmatched id, removing a manual lookup-or-fail branch from every write action.
+
+### Slug regenerates only when the title changes
+
+**Decision:** `update()` rebuilds the unique slug only if the validated `title` differs from the project's stored title.
+
+**Reason:** A project's URL should stay stable across edits that don't touch the title. Regenerating on every update would silently break any bookmarked or shared link.
+
+### Separate public and admin listing endpoints
+
+**Decision:** Keep `GET /api/projects` filtered to published rows, and add a distinct `GET /api/admin/projects` behind `auth:sanctum` that returns every row.
+
+**Reason:** The dashboard needs to show and edit drafts; visitors must never see them. Two endpoints keep that boundary explicit in the route table instead of hiding it behind a conditional inside one shared endpoint.
+
+### One React form for create and edit, reset via `key`
+
+**Decision:** `ProjectForm` takes an optional `editingProject` prop and derives its initial state directly from it; `AdminDashboard` forces a remount with `key={editingProject?.id ?? 'new'}` when the selection changes, instead of syncing props into state inside a `useEffect`.
+
+**Reason:** Avoids the "derived state that needs an effect to stay in sync" anti-pattern, keeps the form's internal state simpler, and matches React's documented guidance for this exact situation.
+
+### No router library
+
+**Decision:** Toggle between the public page and the admin dashboard with a single piece of state in `App.jsx`, not `react-router` or another routing library.
+
+**Reason:** The whole application is one page with two views and no deep-linkable sub-routes yet. Adding a router now would be a dependency with no corresponding need.
+
+**Revisit when:** Individual projects need their own shareable URL, or the admin area grows enough sub-pages to justify real routes.
+
+### Frontend visually matches the `nickos8/portfolio` repo
+
+**Decision:** Port the color tokens (dark/light CSS variables), the `Inter` + `JetBrains Mono` font pairing, and the card/pill/tag/button class patterns from the static `portfolio` repo into this app's `index.css`/`App.css`, rather than inventing a new visual language.
+
+**Reason:** The two repos represent the same person's public presence; visitors clicking through should not experience a jarring style change between the static portfolio and this CRUD-driven one.
+
+**Known limitation:** Full end-to-end browser verification against the real Supabase database was not possible in the session that built this — no network path to Supabase was available. Automated backend tests (SQLite) and frontend lint/build stood in for it. A manual pass is still owed before calling this feature done in `docs/PROJECT_MEMORY.md`'s stricter sense.
+
 ## Deployment direction
 
 ### Planned combined-origin deployment

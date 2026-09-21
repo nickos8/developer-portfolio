@@ -4,13 +4,13 @@
 >
 > Future assistant: read `AGENTS.md` and every document it references before changing the project. Inspect the working tree and tests because GitHub cannot contain uncommitted local work. Never document secrets.
 
-**Last updated:** 2026-09-01  
+**Last updated:** 2026-09-21  
 **Repository:** `nickos8/developer-portfolio`  
 **Default branch:** `main`  
-**Latest verified code commit:** `a26b3e5` — **Add admin authentication and protected project creation**  
-**Current phase:** Authenticated Projects CRUD; create operation and session authentication complete  
-**Next exact feature:** Design and implement the authenticated project-management interface in React, beginning with a project creation form that displays Laravel validation errors  
-**Working tree at checkpoint:** Local `main` clean and synchronized with `origin/main`
+**Latest verified code commit:** pending — see "Current phase" below (branch `claude/tender-pascal-wf0hzb`)  
+**Current phase:** Full Projects CRUD complete on both backend and frontend; public portfolio page and authenticated admin dashboard implemented and styled to match the `nickos8/portfolio` design system  
+**Next exact feature:** Image upload for `image_path`, then deployment planning (see section 11)  
+**Working tree at checkpoint:** All listed changes below verified and ready to commit
 
 ## 1. Purpose
 
@@ -193,12 +193,22 @@ duplicate → portfolio-system-2
 next duplicate → portfolio-system-3
 ```
 
-### Remaining project controller actions
+### Complete project controller actions
 
-- `show`: not implemented
-- `update`: not implemented
-- `destroy`: not implemented
-- image upload: not implemented
+```text
+GET    /api/projects            public, published only
+GET    /api/projects/{project}  public if published; auth:sanctum required if unpublished
+GET    /api/admin/projects      auth:sanctum, every project regardless of publish state
+POST   /api/projects            auth:sanctum, validated create with unique slug
+PUT    /api/projects/{project}  auth:sanctum, validated partial update; slug regenerates only when the title changes
+DELETE /api/projects/{project}  auth:sanctum, deletes the project
+```
+
+`show`, `update`, and `destroy` use Laravel implicit route-model binding (`Project $project`), so an unknown id already 404s before the controller runs.
+
+`UpdateProjectRequest` mirrors `StoreProjectRequest` but every field is `sometimes`, so a `PUT` may send only the fields that changed. The controller only regenerates the slug when the incoming `title` differs from the stored one, so editing unrelated fields never changes a project's URL.
+
+- image upload: not implemented — `image_path` remains a plain string column
 
 ## 6. Authentication architecture
 
@@ -301,20 +311,32 @@ This prevents a refresh from losing the authenticated interface while the Larave
 
 The React interface posts to `/logout`, clears its local user state, and returns to the login form. Refreshing after logout remains logged out.
 
+### Public portfolio and admin dashboard
+
+`App.jsx` now renders one of two views from a single piece of state (`view`, `'public' | 'admin'`), toggled by the header button and the footer's "Admin" link — no router library was added, since the whole thing is one SPA and both views live behind the same root.
+
+Components (`frontend/src/components/`):
+
+- `Header.jsx` — sticky nav bar, view toggle, theme toggle (persists to `localStorage`, falls back to `dark`)
+- `Hero.jsx`, `ProjectsSection.jsx`, `ProjectCard.jsx`, `Footer.jsx` — the public page; `ProjectsSection` fetches `GET /api/projects` and renders only published projects
+- `admin/LoginForm.jsx` — unchanged login sequence (CSRF cookie → `/login` → `/api/user`), now returned by `App.jsx` when no session exists
+- `admin/AdminDashboard.jsx` — fetches `GET /api/admin/projects` (every project, published or not) and renders a list with **Edit**/**Delete** per row
+- `admin/ProjectForm.jsx` — one form for both create and edit. `AdminDashboard` gives it `key={editingProject?.id ?? 'new'}` so switching between "new" and "edit an existing project" remounts it with fresh state instead of syncing props to state inside an effect (React's own guidance, and it also sidesteps an `oxlint` `set-state-in-effect` warning)
+- Technology list is a single comma-separated text input, split into an array client-side before `POST`/`PUT`
+- Laravel's `422` response body (`error.response.data.errors`) is mapped directly onto each field's `field-error` message; any other failure shows a general `form-message`
+
+Visual design: `frontend/src/index.css` and `App.css` port the `nickos8/portfolio` repo's color tokens (dark theme by default, `data-theme="light"` override), the `Inter` + `JetBrains Mono` font pairing, and its card/pill/tag/button component classes, so the two repos read as one visual system. The portfolio repo's static marketing content (hero copy, timeline, skills, certificates) was not copied — this app's hero and content are about the CRUD demo itself, since the "projects" here are the live, editable data.
+
+### Known limitation on this environment
+
+This session had no network path to the Supabase Postgres instance, so the full stack could not be exercised end-to-end in a browser (`herd php artisan serve` + `npm run dev` against real data). Verification instead relied on: the full backend feature-test suite (SQLite `:memory:`, 21 tests, listed below) covering every route and permission boundary, and `npm run lint` / `npm run build` for the frontend. Do a manual browser pass — login, create, edit, publish/unpublish, delete, theme toggle — the first time this runs against the real database.
+
 ### Next frontend work
 
-The current `App.jsx` is an authentication proof-of-flow, not the final portfolio design.
-
-Next:
-
-1. authenticated project creation form
-2. controlled inputs for every validated field
-3. dynamic technology list or a clear initial input strategy
-4. submit through the shared API client
-5. display Laravel `422` field errors
-6. show successful creation response
-7. refetch or update the project list
-8. separate components as the interface grows
+1. Image upload for `image_path` (multipart form, Laravel `Storage`, an `<input type="file">` in `ProjectForm`)
+2. Drag-to-reorder or numeric-only reordering UX for `display_order`
+3. Manual browser verification against Supabase (see limitation above)
+4. Deployment (see roadmap)
 
 ## 8. Verification evidence
 
@@ -334,11 +356,11 @@ Verified:
 
 ### Backend tests
 
-Latest complete result at commit `a26b3e5`:
+Latest complete result on this checkpoint:
 
 ```text
-Tests: 10 passed (34 assertions)
-Duration: 1.11s
+Tests: 21 passed (58 assertions)
+Duration: 0.71s
 ```
 
 Authentication tests:
@@ -354,6 +376,17 @@ Project API tests:
 - authenticated session can create a project
 - duplicate title receives a unique slug
 - invalid data is rejected
+- guest can view a single published project
+- guest cannot view an unpublished project
+- authenticated user can view an unpublished project
+- guest cannot see the admin project list
+- authenticated user sees every project in the admin list
+- guest cannot update a project
+- authenticated user can update a project
+- updating a project without changing the title keeps the slug
+- invalid update data is rejected
+- guest cannot delete a project
+- authenticated user can delete a project
 
 The project tests use `$this->actingAs($user)` because the real application uses session authentication. The earlier `Sanctum::actingAs` attempt failed with missing `withAccessToken()` because it simulated token authentication.
 
@@ -404,11 +437,13 @@ Vite production build completed successfully.
 | Credentialed CORS | Complete |
 | Authentication tests | Complete |
 | Project creation tests | Complete |
-| React project creation form | Next |
-| Public portfolio design | Not started |
-| Project show endpoint | Not started |
-| Project update endpoint | Not started |
-| Project delete endpoint | Not started |
+| React project creation form | Complete |
+| React edit/delete dashboard | Complete |
+| Public portfolio design (matching `portfolio` repo) | Complete |
+| Project show endpoint | Complete |
+| Project update endpoint | Complete |
+| Project delete endpoint | Complete |
+| Manual browser verification against Supabase | Not done in this session (no network path) |
 | Image handling | Not started |
 | Deployment | Planned |
 
@@ -456,23 +491,24 @@ npm run build
 - [x] Validated create
 - [x] Protected create route
 - [x] Backend create tests
-- [ ] React create interface
-- [ ] Single-project read
-- [ ] Validated update
-- [ ] Delete
-- [ ] CRUD test coverage
+- [x] React create interface
+- [x] Single-project read
+- [x] Validated update
+- [x] Delete
+- [x] CRUD test coverage
 - [ ] Image upload
 
 ### Public portfolio
 
-- [ ] Hero
+- [x] Hero (CRUD-demo framing, styled like `portfolio` repo)
 - [ ] About
 - [ ] Skills
-- [ ] Featured projects
-- [ ] All published projects
+- [x] Featured projects (tagged inline on published project cards)
+- [x] All published projects
 - [ ] Contact
 - [ ] Resume link
-- [ ] Responsive and accessible styling
+- [x] Responsive card grid (single column under 820px)
+- [ ] Full accessibility pass (focus order, aria labels on icon-only buttons)
 
 ### Quality and deployment
 
